@@ -1,5 +1,5 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Terminal, Code2, Zap, BookOpen, Trophy, Sun, Moon, User, LogOut, ChevronDown, Award } from 'lucide-react';
+import { Terminal, Code2, Zap, BookOpen, Trophy, Sun, Moon, User, LogOut, ChevronDown, Award, Menu, X } from 'lucide-react';
 import Home from './pages/Home';
 import Challenges from './pages/Challenges';
 import GlobalAssistant from './components/GlobalAssistant';
@@ -12,6 +12,7 @@ import AuthModal from './components/AuthModal';function AppContent() {
   const { pathname } = useLocation();
   const { user, setAuthModalOpen, logout } = useContext(AuthContext);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('theme');
@@ -36,101 +37,236 @@ import AuthModal from './components/AuthModal';function AppContent() {
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
+
+  const navItems = [
+    { name: 'Roadmaps', path: '/roadmap', icon: BookOpen },
+    { name: 'Challenges', path: '/challenges', icon: Trophy },
+    { name: 'Playground', path: '/', icon: Code2 }
+  ];
+
   return (
     <div className="min-h-screen flex flex-col relative">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-50 bg-background border-b border-surfaceBorder">
+      {/* Glassmorphic Navbar */}
+      <nav className="sticky top-0 z-50 w-full border-b border-surfaceBorder/60 bg-background/85 backdrop-blur-md transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="bg-primary/10 p-2 rounded-md group-hover:bg-primary/20 transition-all border border-primary/20">
-                <Terminal className="w-6 h-6 text-primary" />
+              <div className="bg-primary/10 p-2 rounded-xl group-hover:bg-primary/20 transition-all border border-primary/20 dark:shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                <Terminal className="w-5 h-5 text-primary group-hover:scale-105 transition-transform" />
               </div>
               <div className="flex flex-col">
-                <span className="font-black text-xl tracking-tighter text-textMain leading-none">DEV EMPIRE</span>
-                <span className="text-[9px] font-bold tracking-[0.2em] text-accent uppercase mt-0.5">Learning Ecosystem</span>
+                <span className="font-black text-lg tracking-tighter text-textMain leading-none bg-clip-text bg-gradient-to-r from-textMain to-textMain/90 group-hover:to-primary transition-colors">DEV EMPIRE</span>
+                <span className="text-[8px] font-bold tracking-[0.25em] text-accent uppercase mt-0.5 leading-none">Learning Ecosystem</span>
               </div>
             </Link>
 
-            {/* Nav Links */}
-            <div className="flex items-center gap-6">
-              <Link to="/roadmap" className="hidden sm:flex items-center gap-2 text-xs text-textMuted hover:text-textMain font-bold tracking-widest uppercase transition-all">
-                <BookOpen className="w-3.5 h-3.5" />
-                Roadmaps
-              </Link>
-              <Link to="/challenges" className="hidden sm:flex items-center gap-2 text-xs text-textMuted hover:text-textMain font-bold tracking-widest uppercase transition-all">
-                <Trophy className="w-3.5 h-3.5" />
-                Challenges
-              </Link>
-              <Link to="/" className="hidden sm:flex items-center gap-2 text-xs text-textMuted hover:text-textMain font-bold tracking-widest uppercase transition-all">
-                <Code2 className="w-3.5 h-3.5" />
-                Playground
-              </Link>
-              <div className="w-px h-6 bg-surfaceBorder hidden sm:block" />
-              
+            {/* Desktop Navigation Links */}
+            <div className="hidden sm:flex items-center gap-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.path;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wider uppercase transition-all duration-200 border ${
+                      isActive 
+                        ? 'text-primary bg-primary/5 dark:bg-primary/10 border-primary/15'
+                        : 'text-textMuted hover:text-textMain hover:bg-surface/50 border-transparent'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Right Controls */}
+            <div className="flex items-center gap-3">
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-md surface border border-surfaceBorder text-textMuted hover:text-textMain transition-all cursor-pointer flex items-center justify-center"
+                className="p-2.5 rounded-xl bg-surface/50 border border-surfaceBorder text-textMuted hover:text-textMain transition-all cursor-pointer flex items-center justify-center active:scale-95 group shadow-sm hover:border-surfaceBorderHover"
                 aria-label="Toggle light/dark theme"
               >
-                {theme === 'dark' ? <Sun className="w-4 h-4 text-warning" /> : <Moon className="w-4 h-4" />}
+                {theme === 'dark' ? (
+                  <Sun className="w-4 h-4 text-warning group-hover:rotate-45 transition-transform duration-300" />
+                ) : (
+                  <Moon className="w-4 h-4 group-hover:-rotate-12 transition-transform duration-300" />
+                )}
               </button>
 
-              {user ? (
-                <div className="relative">
-                  <button 
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className="px-4 py-2 bg-surface border border-surfaceBorder rounded-md text-textMain hover:border-primary/50 transition-all font-semibold text-xs flex items-center gap-2 cursor-pointer shadow-sm"
+              <div className="w-px h-6 bg-surfaceBorder hidden sm:block" />
+
+              {/* Desktop User Section */}
+              <div className="hidden sm:block">
+                {user ? (
+                  <div className="relative">
+                    <button 
+                      onClick={() => setDropdownOpen(!dropdownOpen)}
+                      className="px-3 py-1.5 bg-surface/80 dark:bg-background/40 hover:bg-surface border border-surfaceBorder hover:border-primary/30 rounded-xl text-textMain transition-all font-bold text-xs flex items-center gap-2.5 cursor-pointer shadow-sm active:scale-98"
+                    >
+                      <div className="relative">
+                        <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-primary/20 to-accent/20 border border-primary/30 flex items-center justify-center text-primary font-black uppercase text-[11px] shadow-inner">
+                          {user.username[0]}
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 bg-primary text-[7px] text-white font-black px-1 rounded-full border border-surface scale-90">
+                          {user.level || 1}
+                        </div>
+                      </div>
+                      <span className="truncate max-w-[80px] font-bold">{user.username}</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-textMuted transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {dropdownOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
+                        <div className="absolute right-0 mt-2.5 w-56 bg-surface border border-surfaceBorder rounded-2xl shadow-xl py-3.5 z-50 animate-scale-in">
+                          <div className="px-4 pb-3 border-b border-surfaceBorder mb-3 text-left">
+                            <div className="text-xs font-black text-textMain truncate">{user.username}</div>
+                            <div className="text-[10px] text-textMuted truncate mb-2">{user.email}</div>
+                            
+                            {/* XP Progress Section */}
+                            <div className="mt-2.5 pt-2.5 border-t border-surfaceBorder/60">
+                              <div className="flex justify-between text-[9px] text-textDim font-black uppercase tracking-wider mb-1.5">
+                                <span className="flex items-center gap-1 text-primary">
+                                  <Award className="w-3 h-3" />
+                                  Level {user.level || 1}
+                                </span>
+                                <span>{(user.xp || 0) % 100}%</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-surfaceBorder rounded-full overflow-hidden shadow-inner">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500" 
+                                  style={{ width: `${(user.xp || 0) % 100}%` }}
+                                />
+                              </div>
+                              <div className="text-[8px] text-textDim font-bold text-right mt-1">{(user.xp || 0)} total XP</div>
+                            </div>
+                          </div>
+                          
+                          <button
+                            onClick={() => {
+                              logout();
+                              setDropdownOpen(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-xs text-danger hover:bg-danger/5 flex items-center gap-2 font-bold transition-colors cursor-pointer"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            Sign Out
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setAuthModalOpen(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-primary to-primary-hover hover:from-primary-hover hover:to-primary text-white border border-primary-hover/50 hover:border-primary/60 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center gap-2 cursor-pointer shadow-md hover:shadow-lg hover:shadow-primary/10 active:scale-95"
                   >
-                    <div className="w-5 h-5 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black uppercase text-[10px]">
+                    <Zap className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
+                    Sign In
+                  </button>
+                )}
+              </div>
+
+              {/* Mobile Hamburger menu */}
+              <button 
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="sm:hidden p-2.5 rounded-xl bg-surface/50 border border-surfaceBorder text-textMuted hover:text-textMain transition-all cursor-pointer flex items-center justify-center active:scale-95 shadow-sm"
+                aria-label="Toggle mobile menu"
+              >
+                {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <>
+            <div className="fixed inset-0 bg-background/40 backdrop-blur-sm z-30 sm:hidden" onClick={() => setMobileMenuOpen(false)} />
+            <div className="absolute top-16 left-0 right-0 bg-background/95 backdrop-blur-lg border-b border-surfaceBorder z-40 p-4 shadow-xl flex flex-col gap-3 animate-slide-up sm:hidden">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.path;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${
+                      isActive 
+                        ? 'text-primary bg-primary/5 dark:bg-primary/10 border border-primary/20 shadow-sm'
+                        : 'text-textMuted hover:text-textMain hover:bg-surface/50 border border-transparent'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.name}
+                  </Link>
+                );
+              })}
+              
+              <div className="h-px bg-surfaceBorder/80 my-1" />
+
+              {/* Mobile Profile / Auth */}
+              {user ? (
+                <div className="flex flex-col gap-3.5 p-2 bg-surface/30 rounded-2xl border border-surfaceBorder/50 mt-1">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary/20 to-accent/20 border border-primary/30 flex items-center justify-center text-primary font-black uppercase text-xs shadow-inner">
                       {user.username[0]}
                     </div>
-                    <span className="truncate max-w-[80px]">{user.username}</span>
-                    <ChevronDown className="w-3.5 h-3.5 text-textMuted" />
-                  </button>
+                    <div>
+                      <div className="text-xs font-black text-textMain truncate leading-none">{user.username}</div>
+                      <div className="text-[10px] text-textMuted truncate mt-1">{user.email}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Mobile XP Progress */}
+                  <div className="border-t border-surfaceBorder/60 pt-2.5">
+                    <div className="flex justify-between text-[9px] text-textDim font-black uppercase tracking-wider mb-1.5">
+                      <span className="flex items-center gap-1 text-primary">
+                        <Award className="w-3 h-3" />
+                        Level {user.level || 1}
+                      </span>
+                      <span>{(user.xp || 0) % 100}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-surfaceBorder rounded-full overflow-hidden shadow-inner">
+                      <div 
+                        className="h-full bg-gradient-to-r from-primary to-accent rounded-full" 
+                        style={{ width: `${(user.xp || 0) % 100}%` }}
+                      />
+                    </div>
+                  </div>
 
-                  {dropdownOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                      <div className="absolute right-0 mt-2 w-48 bg-surface border border-surfaceBorder rounded-xl shadow-xl py-2 z-50 animate-scale-in">
-                        <div className="px-4 py-2 border-b border-surfaceBorder mb-2 text-left">
-                          <div className="text-xs font-black text-textMain truncate">{user.username}</div>
-                          <div className="text-[10px] text-textMuted truncate mb-1.5">{user.email}</div>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="text-[9px] bg-primary/15 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-black uppercase">
-                              Lvl {user.level || 1}
-                            </span>
-                            <span className="text-[10px] text-textDim font-bold">{user.xp || 0} XP</span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            logout();
-                            setDropdownOpen(false);
-                          }}
-                          className="w-full text-left px-4 py-2 text-xs text-danger hover:bg-danger/5 flex items-center gap-2 font-semibold transition-colors cursor-pointer"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          Sign Out
-                        </button>
-                      </div>
-                    </>
-                  )}
+                  <button
+                    onClick={() => {
+                      logout();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full py-3 bg-danger/10 border border-danger/20 rounded-xl text-xs text-danger font-bold flex items-center justify-center gap-2 transition-all hover:bg-danger/20 cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
                 </div>
               ) : (
                 <button
-                  onClick={() => setAuthModalOpen(true)}
-                  className="px-5 py-2 bg-primary text-white border border-primary-hover rounded-md font-semibold text-xs tracking-wide hover:bg-primary-hover transition-all flex items-center gap-2 cursor-pointer shadow-md"
+                  onClick={() => {
+                    setAuthModalOpen(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full py-3.5 bg-primary text-white border border-primary-hover rounded-xl font-bold text-xs tracking-wider hover:bg-primary-hover transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
                 >
-                  <Zap className="w-3.5 h-3.5" />
+                  <Zap className="w-4 h-4 text-yellow-300 animate-pulse" />
                   Sign In
                 </button>
               )}
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </nav>
 
       {/* Main Content */}
