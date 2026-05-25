@@ -43,6 +43,9 @@ export default function GlobalAssistant() {
   const [aiReport, setAiReport] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const messagesEndRef = useRef(null);
+  const syncTimeoutRef = useRef(null);
+  const isCreatingSessionRef = useRef(false);
+  const lastSyncedChatRef = useRef('');
 
   // Load existing chat session from DB when drawer opens (if logged in)
   useEffect(() => {
@@ -55,19 +58,83 @@ export default function GlobalAssistant() {
         .then((sessions) => {
           if (sessions && sessions.length > 0) {
             const latest = sessions[0];
+            const latestMessages = latest.messages || [];
             setChatSessionId(latest.id);
-            setChatHistory(latest.messages || []);
+            setChatHistory(latestMessages);
+            lastSyncedChatRef.current = JSON.stringify(latestMessages);
           }
         })
         .catch((e) => console.error('Failed to load chat sessions', e));
     }
   }, [chatOpen, token]);
 
-  // Persist chat to backend whenever it changes (debounced to avoid excessive calls)
+  // Persist chat silently after generation settles.
   useEffect(() => {
-    if (chatSessionId && token) {
-      // Update existing session
-        fetch(`${API_BASE_URL}/api/chat-sessions/${chatSessionId}`, {
+    if (chatHistory && chatHistory.length > 0) {
+      localStorage.setItem('previous_chat_history', JSON.stringify(chatHistory));
+    }
+
+    if (!token || !chatHistory.length || isGenerating) return;
+
+    const serializedChat = JSON.stringify(chatHistory);
+    if (serializedChat === lastSyncedChatRef.current) return;
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    syncTimeoutRef.current = setTimeout(async () => {
+      try {
+        if (chatSessionId) {
+          const res = await fetch(`${API_BASE_URL}/api/chat-sessions/${chatSessionId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ messages: chatHistory })
+          });
+
+          if (!res.ok) throw new Error('Failed to update chat session');
+          lastSyncedChatRef.current = serializedChat;
+          return;
+        }
+
+        if (isCreatingSessionRef.current) return;
+        isCreatingSessionRef.current = true;
+
+        const res = await fetch(`${API_BASE_URL}/api/chat-sessions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ messages: chatHistory })
+        });
+
+        if (!res.ok) throw new Error('Failed to create chat session');
+
+        const data = await res.json();
+        setChatSessionId(data.id);
+        lastSyncedChatRef.current = serializedChat;
+      } catch (e) {
+        console.error('Failed to sync chat session', e);
+      } finally {
+        isCreatingSessionRef.current = false;
+      }
+    }, 800);
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [chatHistory, token, chatSessionId, isGenerating]);
+
+  // Persist empty chat clears to backend after the local clear action.
+  useEffect(() => {
+    if (chatSessionId && token && chatHistory.length === 0 && lastSyncedChatRef.current) {
+      fetch(`${API_BASE_URL}/api/chat-sessions/${chatSessionId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -77,39 +144,11 @@ export default function GlobalAssistant() {
         })
           .then((res) => {
             if (!res.ok) throw new Error('Failed to update chat session');
-            // Show success toast
-            window.alert('Chat session updated.');
+            lastSyncedChatRef.current = JSON.stringify(chatHistory);
           })
           .catch((e) => console.error('Failed to sync chat session', e));
-    } else if (chatHistory.length > 0 && token) {
-      // Create a new session if none exists yet
-        fetch(`${API_BASE_URL}/api/chat-sessions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ messages: chatHistory })
-        })
-          .then((res) => {
-            if (!res.ok) throw new Error('Failed to create chat session');
-            return res.json();
-          })
-          .then((data) => {
-            setChatSessionId(data.id);
-            // Show success toast
-            window.alert('Chat session saved.');
-          })
-          .catch((e) => {
-            console.error('Failed to create chat session', e);
-            window.alert('Error saving chat session.');
-          });
     }
-    // Also persist to localStorage as before
-    if (chatHistory && chatHistory.length > 0) {
-      localStorage.setItem('previous_chat_history', JSON.stringify(chatHistory));
-    }
-  }, [chatHistory, token]);
+  }, [chatHistory, token, chatSessionId]);
 
   // Existing localStorage load prompt (unchanged)
   useEffect(() => {
@@ -125,13 +164,6 @@ export default function GlobalAssistant() {
       }
     }
   }, []);
-
-  // Save chat history to localStorage on changes
-  useEffect(() => {
-    if (chatHistory && chatHistory.length > 0) {
-      localStorage.setItem('previous_chat_history', JSON.stringify(chatHistory));
-    }
-  }, [chatHistory]);
 
   // Reload scores whenever drawer opens or location changes
   useEffect(() => {
