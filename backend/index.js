@@ -12,6 +12,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_dev_empire_jwt_token_
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
+  'https://dev-empire.vercel.app',
   'https://dev-empire-9twz.vercel.app',
   ...(process.env.ALLOWED_ORIGINS || '')
     .split(',')
