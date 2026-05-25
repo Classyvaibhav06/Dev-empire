@@ -27,6 +27,7 @@ import TopicCard from '../components/TopicCard';
 import ProgressBar from '../components/ProgressBar';
 import { getTopicById } from '../utils/topicContent';
 import { AuthContext } from '../context/AuthContext';
+import { API_BASE_URL } from '../config';
 
 export default function Roadmap() {
   const { token } = useContext(AuthContext);
@@ -71,7 +72,7 @@ export default function Roadmap() {
 
     if (token) {
       try {
-        await fetch('http://localhost:5000/api/user/progress', {
+        await fetch(`${API_BASE_URL}/api/user/progress`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -261,7 +262,7 @@ Guide the student step-by-step. Keep explanations clear, engaging, and in line w
     setChatHistory((prev) => [...prev, newAssistantMsg]);
 
     try {
-      const response = await fetch('http://localhost:5000/api/chat', {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

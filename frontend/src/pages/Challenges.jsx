@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Trophy, Code2, AlertCircle, CheckCircle, Flame, Star, Play, Award, Sparkles, RefreshCw, X, Lock } from 'lucide-react';
 import { Card, Badge } from '../components/ui/Shared';
 import { AuthContext } from '../context/AuthContext';
+import { API_BASE_URL } from '../config';
 
 const CHALLENGES_DATA = [
   {
@@ -157,7 +158,7 @@ export default function Challenges() {
         // Sync to DB if logged in
         if (token && !alreadyDone) {
           try {
-            const res = await fetch('http://localhost:5000/api/user/challenge', {
+            const res = await fetch(`${API_BASE_URL}/api/user/challenge`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 
 export const AuthContext = createContext();
 
@@ -16,7 +17,7 @@ export function AuthProvider({ children }) {
         return;
       }
       try {
-        const res = await fetch('http://localhost:5000/api/auth/me', {
+        const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -26,7 +27,7 @@ export function AuthProvider({ children }) {
           setUser(userData);
           
           // Pull latest progress and sync to local storage
-          const profileRes = await fetch('http://localhost:5000/api/user/profile', {
+          const profileRes = await fetch(`${API_BASE_URL}/api/user/profile`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (profileRes.ok) {
@@ -49,7 +50,7 @@ export function AuthProvider({ children }) {
   }, [token]);
 
   const login = async (email, password) => {
-    const res = await fetch('http://localhost:5000/api/auth/login', {
+    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
@@ -61,7 +62,7 @@ export function AuthProvider({ children }) {
     setToken(data.token);
 
     // Sync progress from DB to LocalStorage
-    const profileRes = await fetch('http://localhost:5000/api/user/profile', {
+    const profileRes = await fetch(`${API_BASE_URL}/api/user/profile`, {
       headers: { 'Authorization': `Bearer ${data.token}` }
     });
     if (profileRes.ok) {
@@ -75,7 +76,7 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (username, email, password) => {
-    const res = await fetch('http://localhost:5000/api/auth/register', {
+    const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password })
@@ -92,7 +93,7 @@ export function AuthProvider({ children }) {
       const savedCompleted = localStorage.getItem('codepath_completed');
       const completedList = savedCompleted ? JSON.parse(savedCompleted) : [];
       for (const topicId of completedList) {
-        await fetch('http://localhost:5000/api/user/progress', {
+        await fetch(`${API_BASE_URL}/api/user/progress`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -105,7 +106,7 @@ export function AuthProvider({ children }) {
       const savedScores = localStorage.getItem('concept_scores');
       const scoresDict = savedScores ? JSON.parse(savedScores) : {};
       for (const [key, val] of Object.entries(scoresDict)) {
-        await fetch('http://localhost:5000/api/user/concept-score', {
+        await fetch(`${API_BASE_URL}/api/user/concept-score`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -125,7 +126,7 @@ export function AuthProvider({ children }) {
       const savedChallenges = localStorage.getItem('completed_challenges');
       const challengesList = savedChallenges ? JSON.parse(savedChallenges) : [];
       for (const challengeId of challengesList) {
-        await fetch('http://localhost:5000/api/user/challenge', {
+        await fetch(`${API_BASE_URL}/api/user/challenge`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

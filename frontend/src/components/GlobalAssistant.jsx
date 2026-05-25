@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 import {
   MessageSquare,
   X,
@@ -47,7 +48,7 @@ export default function GlobalAssistant() {
   useEffect(() => {
     if (chatOpen && token) {
       // Try to fetch the latest session for the user
-      fetch('http://localhost:5000/api/chat-sessions', {
+      fetch(`${API_BASE_URL}/api/chat-sessions`, {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then((res) => res.json())
@@ -66,7 +67,7 @@ export default function GlobalAssistant() {
   useEffect(() => {
     if (chatSessionId && token) {
       // Update existing session
-        fetch(`http://localhost:5000/api/chat-sessions/${chatSessionId}`, {
+        fetch(`${API_BASE_URL}/api/chat-sessions/${chatSessionId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -82,7 +83,7 @@ export default function GlobalAssistant() {
           .catch((e) => console.error('Failed to sync chat session', e));
     } else if (chatHistory.length > 0 && token) {
       // Create a new session if none exists yet
-        fetch('http://localhost:5000/api/chat-sessions', {
+        fetch(`${API_BASE_URL}/api/chat-sessions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -233,7 +234,7 @@ Guide the student step-by-step. Keep explanations clear, engaging, and context-a
         ...updatedHistory
       ];
 
-      const response = await fetch('http://localhost:5000/api/chat', {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -325,7 +326,7 @@ ${scoreSummaries || 'None attempted yet. Please take quizzes first.'}
 
 Analyze my strong areas, identify weak topics I struggled with, and draft a tailored, step-by-step personalized recommendations list to help me master my weak points. Use beautiful formatting, alerts, and sections.`;
 
-      const response = await fetch('http://localhost:5000/api/chat', {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
