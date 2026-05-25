@@ -1,148 +1,288 @@
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Clock, CircleDashed, Layout, Map, Code2 } from 'lucide-react';
+import { ArrowRight, Code2, Globe, Cpu, Shield, Database, Sparkles, Zap, Trophy, Users, Play } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Card, Badge } from '../components/ui/Shared';
+import { learningPaths } from '../data/roadmaps';
+import { BackgroundPaths } from '../components/ui/background-paths';
 
 export default function Home() {
+  const [activeFeature, setActiveFeature] = useState(0);
+  const [playgroundCode, setPlaygroundCode] = useState(
+    `const coder = {\n  name: "Alex",\n  skills: ["React", "Node"],\n  isReady: true\n};\n\nconsole.log(coder.name + " is live! 🚀");`
+  );
+  const [playgroundOutput, setPlaygroundOutput] = useState('Alex is live! 🚀');
+
+  const runPlaygroundCode = () => {
+    let logs = [];
+    const customConsole = {
+      log: (...args) => {
+        logs.push(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '));
+      },
+      error: (...args) => {
+        logs.push(`Error: ${args.join(' ')}`);
+      }
+    };
+    try {
+      const run = new Function('console', playgroundCode);
+      run(customConsole);
+      setPlaygroundOutput(logs.join('\n') || 'Code ran successfully.');
+    } catch (err) {
+      setPlaygroundOutput(`Error: ${err.message}`);
+    }
+  };
+
+  const features = [
+    { 
+      icon: <Zap className="text-warning w-5 h-5" />, 
+      title: "Interactive Roadmaps", 
+      desc: "Follow structured, visual paths from zero to senior engineer with progress tracking at every node.",
+      color: "warning"
+    },
+    { 
+      icon: <Trophy className="text-accent w-5 h-5" />, 
+      title: "Gamified Learning", 
+      desc: "Earn XP, unlock rare developer badges, and rise in the global leaderboards while doing daily challenges.",
+      color: "accent"
+    },
+    { 
+      icon: <Code2 className="text-primary w-5 h-5" />, 
+      title: "In-Browser Playground", 
+      desc: "Write, test, and run code directly in your browser with instant visual and compiler feedback.",
+      color: "primary"
+    }
+  ];
+
   return (
-    <div className="relative flex-1 flex items-center justify-center min-h-[90vh] px-4 overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden">
+      {/* ── HERO SECTION ── */}
+      <BackgroundPaths title="Master the Digital Empire" />
 
-      {/* ── UPPER LEFT: Yellow sticky note ── */}
-      <div className="hidden lg:block absolute top-10 left-10 bg-[#fef08a] w-52 p-5 rounded-lg shadow-lg -rotate-6 border border-yellow-200 z-10">
-        <div className="w-4 h-4 rounded-full bg-red-400 absolute -top-2 left-1/2 -translate-x-1/2 shadow"></div>
-        <div className="flex items-center gap-1.5 mb-2">
-          <Map className="w-4 h-4 text-amber-800 shrink-0" />
-          <span className="font-bold text-amber-900 text-base" style={{ fontFamily: "'Caveat', cursive" }}>
-            Structured Roadmap
-          </span>
-        </div>
-        <p className="text-amber-900 text-sm leading-snug" style={{ fontFamily: "'Caveat', cursive" }}>
-          Follow a step-by-step path from beginner to advanced with no confusion.
-        </p>
-      </div>
+      {/* ── PATHS SELECTOR ── */}
+      <section id="paths" className="py-24 px-4 bg-surfaceLight border-y border-surfaceBorder relative z-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-16">
+            <h2 className="text-4xl font-bold mb-4">Choose Your <span className="text-primary">Destiny</span></h2>
+            <p className="text-textMuted">Specialized learning paths designed by industry experts.</p>
+          </div>
 
-      {/* ── MID LEFT: small code icon badge ── */}
-      <div className="hidden lg:block absolute top-1/2 left-[6%] -translate-y-1/2 bg-white p-3 rounded-2xl shadow-lg border border-gray-100 z-10">
-        <div className="bg-primary text-white p-1.5 rounded-lg">
-          <Code2 className="w-5 h-5" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {learningPaths.map((path) => (
+              <Link 
+                key={path.id} 
+                to="/roadmap" 
+                onClick={() => localStorage.setItem('selected_roadmap_path', path.id)}
+                className="group block h-full"
+              >
+                <Card className="cursor-pointer flex flex-col h-full hover:border-primary/50 transition-all">
+                  <div className="w-12 h-12 rounded-md mb-6 flex items-center justify-center transition-all bg-surfaceLight border border-surfaceBorder group-hover:border-primary/50 shadow-sm" style={{ color: path.color }}>
+                    {path.id === 'frontend' && <Globe className="w-6 h-6" />}
+                    {path.id === 'backend' && <Database className="w-6 h-6" />}
+                    {path.id === 'fullstack' && <Cpu className="w-6 h-6" />}
+                    {path.id === 'ai-ml' && <Zap className="w-6 h-6" />}
+                  </div>
+                  <Badge variant={path.difficulty === 'Beginner' ? 'success' : path.difficulty === 'Intermediate' ? 'warning' : 'danger'} className="mb-4 w-max">
+                    {path.difficulty}
+                  </Badge>
+                  <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">{path.title}</h3>
+                  <p className="text-sm text-textMuted mb-6 flex-grow">{path.description}</p>
+                  <div className="flex items-center justify-between text-xs font-semibold text-textDim border-t border-surfaceBorder pt-4 mt-auto">
+                    <span>{path.duration}</span>
+                    <div className="flex items-center gap-1">
+                      <Users className="w-3 h-3" /> 12k+ Students
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* ── UPPER RIGHT: Track Progress card ── */}
-      <div className="hidden lg:block absolute top-10 right-10 bg-white w-60 p-5 rounded-2xl shadow-lg border border-gray-100 rotate-2 z-10">
-        <h4 className="font-bold text-textMain mb-3 text-sm">Track Progress</h4>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl text-sm border border-gray-100">
-            <span className="font-semibold text-textMain">HTML Basics</span>
-            <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-          </div>
-          <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl text-sm border border-gray-100">
-            <span className="font-semibold text-textMain">CSS Basics</span>
-            <Clock className="w-4 h-4 text-yellow-500 shrink-0" />
-          </div>
-          <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl text-sm border border-gray-100 opacity-50">
-            <span className="font-medium text-textMuted">JavaScript</span>
-            <CircleDashed className="w-4 h-4 text-gray-400 shrink-0" />
-          </div>
-        </div>
-      </div>
-
-      {/* ── LOWER LEFT: Today's Learning card ── */}
-      <div className="hidden lg:block absolute bottom-10 left-10 bg-white w-64 p-5 rounded-2xl shadow-lg border border-gray-100 z-10">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="bg-purple-50 p-1.5 rounded-lg">
-            <Layout className="w-4 h-4 text-purple-500" />
-          </div>
-          <h4 className="font-bold text-textMain text-sm">Today's Learning</h4>
-        </div>
-        <ul className="space-y-3">
-          <li className="flex items-start gap-2.5">
-            <div className="w-2 h-2 rounded-full bg-success mt-1.5 shrink-0"></div>
-            <div>
-              <p className="text-xs font-semibold text-textMain">Complete HTML Basics</p>
-              <p className="text-[10px] text-textMuted mt-0.5">Watch 2 videos</p>
+      {/* ── FEATURES ── */}
+      <section className="py-24 px-4 relative z-10">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+          <div>
+            <Badge variant="accent" className="mb-6">Core Ecosystem</Badge>
+            <h2 className="text-5xl font-bold mb-8 leading-tight">Everything You Need to <br /> Level Up</h2>
+            
+            <div className="space-y-4">
+              {features.map((f, i) => {
+                const isActive = activeFeature === i;
+                return (
+                  <div 
+                    key={i} 
+                    onMouseEnter={() => setActiveFeature(i)}
+                    className={`p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${
+                      isActive 
+                        ? 'bg-surface border-primary/40 shadow-md shadow-primary/5 translate-x-1' 
+                        : 'border-transparent hover:bg-surface/50 hover:border-surfaceBorder'
+                    }`}
+                  >
+                    <div className="flex gap-4 items-start">
+                      <div className={`p-3 rounded-xl border shrink-0 transition-all duration-300 ${
+                        isActive 
+                          ? 'bg-primary/10 border-primary/30 scale-110' 
+                          : 'surface border-surfaceBorder'
+                      }`}>
+                        {f.icon}
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-bold mb-1 text-textMain">{f.title}</h4>
+                        <p className="text-sm text-textMuted leading-relaxed">{f.desc}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </li>
-          <li className="flex items-start gap-2.5">
-            <div className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
-            <div>
-              <p className="text-xs font-semibold text-textMain">Build your first webpage</p>
-              <p className="text-[10px] text-textMuted mt-0.5">Practice project</p>
-            </div>
-          </li>
-        </ul>
-      </div>
+          </div>
 
-      {/* ── LOWER RIGHT: Roadmap path preview ── */}
-      <div className="hidden lg:block absolute bottom-10 right-10 bg-white w-60 p-5 rounded-2xl shadow-lg border border-gray-100 z-10">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Learning Path</p>
-        <div className="flex flex-col gap-2">
-          {[
-            { name: 'HTML', done: true },
-            { name: 'CSS', done: false },
-            { name: 'JavaScript', done: false },
-            { name: 'React', done: false },
-          ].map((step, i) => (
-            <div key={step.name} className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${step.done ? 'bg-primary text-white' : 'bg-gray-100 text-textMuted'}`}>
-                {i + 1}
+          <div className="relative h-[480px] flex items-center justify-center">
+            {/* Background ambient glow matching the active feature's theme color */}
+            <div className={`absolute -inset-10 rounded-full blur-[100px] transition-all duration-700 opacity-20 ${
+              activeFeature === 0 ? 'bg-warning/80' : activeFeature === 1 ? 'bg-accent/80' : 'bg-primary/80'
+            }`} />
+
+            <div className="w-full h-full bg-surface border border-surfaceBorder rounded-3xl shadow-2xl overflow-hidden flex flex-col relative z-10">
+              {/* Mock Window Titlebar */}
+              <div className="px-5 py-4 border-b border-surfaceBorder bg-surfaceLight flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-danger/70" />
+                <div className="w-3 h-3 rounded-full bg-warning/70" />
+                <div className="w-3 h-3 rounded-full bg-success/70" />
+                <span className="text-[10px] text-textDim font-mono ml-4 uppercase tracking-widest">
+                  {activeFeature === 0 ? 'roadmap_visualizer.sh' : activeFeature === 1 ? 'gamification_leaderboard.db' : 'sandbox_playground.js'}
+                </span>
               </div>
-              <span className={`text-xs font-semibold ${step.done ? 'text-textMain' : 'text-textMuted'}`}>{step.name}</span>
-              {step.done && <CheckCircle2 className="w-3 h-3 text-success ml-auto" />}
+
+              {/* Dynamic Content Switching with Framer Motion */}
+              <div className="flex-1 p-8 overflow-y-auto relative select-text font-sans flex flex-col justify-center">
+                <AnimatePresence mode="wait">
+                  {activeFeature === 0 && (
+                    <motion.div
+                      key="roadmap"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.3 }}
+                      className="h-full flex flex-col justify-center items-center gap-6"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="px-4 py-2 rounded-xl bg-success/15 border border-success/30 text-success text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                          <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                          Internet Basics
+                        </div>
+                        <div className="w-8 h-0.5 bg-surfaceBorder" />
+                        <div className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-sm">
+                          HTTP / HTTPS
+                        </div>
+                      </div>
+                      
+                      <div className="h-8 w-px bg-surfaceBorder" />
+
+                      <div className="flex items-center gap-3">
+                        <div className="px-4 py-2 rounded-xl bg-background border border-surfaceBorder text-textMuted text-xs font-bold opacity-60">
+                          DNS System
+                        </div>
+                        <div className="w-8 h-0.5 bg-surfaceBorder" />
+                        <div className="px-4 py-2 rounded-xl bg-background border border-surfaceBorder text-textMuted text-xs font-bold opacity-60">
+                          Browsers
+                        </div>
+                      </div>
+                      
+                      <p className="text-xs text-textMuted text-center max-w-xs mt-4">
+                        Step-by-step learning nodes connect logically to form your master path. Track progress natively.
+                      </p>
+                    </motion.div>
+                  )}
+
+                  {activeFeature === 1 && (
+                    <motion.div
+                      key="leaderboard"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.3 }}
+                      className="h-full flex flex-col justify-center space-y-4"
+                    >
+                      <div className="text-xs font-black text-accent uppercase tracking-widest text-center mb-2">XP Boost Leaderboard</div>
+                      <div className="space-y-2.5">
+                        {[
+                          { rank: '👑', name: 'Alex River', xp: '12,450 XP', level: 'Lvl 42' },
+                          { rank: '2', name: 'Sophia Chen', xp: '10,200 XP', level: 'Lvl 38' },
+                          { rank: '3', name: 'Liam Dev', xp: '9,850 XP', level: 'Lvl 35' }
+                        ].map((user, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-background/50 border border-surfaceBorder hover:border-accent/40 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <span className="w-6 text-center text-xs font-black">{user.rank}</span>
+                              <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-[10px] font-black text-accent uppercase">{user.name.split(' ').map(n=>n[0]).join('')}</div>
+                              <span className="text-xs font-bold text-textMain">{user.name}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-[10px] bg-accent/15 text-accent border border-accent/20 px-2 py-0.5 rounded-full font-black uppercase">{user.level}</span>
+                              <span className="text-xs font-bold text-textMuted">{user.xp}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {activeFeature === 2 && (
+                    <motion.div
+                      key="playground"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.3 }}
+                      className="h-full flex flex-col justify-between font-mono text-xs"
+                    >
+                      {/* Code Editor Container */}
+                      <div className="bg-background border border-surfaceBorder rounded-xl p-4 text-accent overflow-hidden my-auto flex flex-col relative group/editor">
+                        <div className="text-textDim text-[10px] mb-2 flex justify-between items-center select-none">
+                          <span>// index.js (Editable!)</span>
+                        </div>
+                        <textarea
+                          value={playgroundCode}
+                          onChange={(e) => setPlaygroundCode(e.target.value)}
+                          className="w-full h-24 bg-transparent text-textMain border-none focus:ring-0 focus:outline-none resize-none font-mono text-xs leading-relaxed"
+                          spellCheck="false"
+                        />
+                      </div>
+
+                      {/* Action Bar */}
+                      <div className="flex justify-between items-center my-3 select-none">
+                        <span className="text-[10px] text-textDim font-mono">// Edit the code above and run</span>
+                        <button
+                          onClick={runPlaygroundCode}
+                          type="button"
+                          className="px-4 py-2 bg-primary hover:bg-primary-hover text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-white" /> Run Code
+                        </button>
+                      </div>
+                      
+                      {/* Console Output Panel */}
+                      <div className="p-3 bg-success/15 border border-success/30 rounded-xl text-success flex items-center gap-2 font-mono select-text">
+                        <span className="w-2.5 h-2.5 rounded-full bg-success animate-pulse shrink-0" />
+                        <span className="break-all">&gt; Output: {playgroundOutput}</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-          ))}
+
+            {/* Premium Floaties matching current theme */}
+            <div className="absolute -top-6 -right-6 surface border border-surfaceBorder p-4 rounded-2xl shadow-lg z-20">
+               <Shield className="w-6 h-6 text-success animate-bounce" />
+            </div>
+            <div className="absolute -bottom-6 -left-6 surface border border-surfaceBorder p-4 rounded-2xl shadow-lg z-20">
+               <Sparkles className="w-6 h-6 text-accent animate-pulse" />
+            </div>
+          </div>
         </div>
-      </div>
-
-      {/* ══ HERO — perfectly centered, clear of all cards ══ */}
-      <div className="relative z-20 text-center max-w-2xl mx-auto space-y-6">
-        <h1
-          style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontWeight: 800,
-            fontSize: 'clamp(2.8rem, 6vw, 4.5rem)',
-            lineHeight: 1.08,
-            letterSpacing: '-0.03em',
-            color: '#111111',
-          }}
-        >
-          Learn Coding with a{' '}
-          <br />
-          <span
-            style={{
-              background: 'linear-gradient(90deg, #3b82f6, #0ea5e9)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            Clear Roadmap
-          </span>
-        </h1>
-
-        <p
-          style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontWeight: 500,
-            fontSize: '1.05rem',
-            color: '#64748b',
-            lineHeight: 1.6,
-            maxWidth: '30rem',
-            margin: '0 auto',
-          }}
-        >
-          Step-by-step learning paths, curated videos, and real-world projects — all in one place.
-        </p>
-
-        <Link
-          to="/roadmap"
-          className="inline-flex items-center gap-2 px-8 py-3.5 bg-primary hover:bg-primary-hover text-white rounded-full font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all text-base"
-          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600 }}
-        >
-          Start Learning
-          <ArrowRight className="w-4 h-4" />
-        </Link>
-      </div>
-
-
+      </section>
     </div>
   );
 }
