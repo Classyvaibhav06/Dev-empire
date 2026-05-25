@@ -9,14 +9,38 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_dev_empire_jwt_token_key_1234';
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://dev-empire-9twz.vercel.app',
+  ...(process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean),
+];
 
 const openai = new OpenAI({
   apiKey: process.env.NVIDIA_API_KEY || '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',
   baseURL: 'https://integrate.api.nvidia.com/v1',
 });
 
-app.use(cors());
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
+
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true });
+});
 
 // Initialize PostgreSQL Schema on Startup
 db.initDb()
