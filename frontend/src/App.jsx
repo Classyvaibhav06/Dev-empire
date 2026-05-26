@@ -6,6 +6,7 @@ import GlobalAssistant from './components/GlobalAssistant';
 import Roadmap from './pages/Roadmap';
 import TopicDetail from './pages/TopicDetail';
 import ConceptDetail from './pages/ConceptDetail';
+import Leaderboard from './pages/Leaderboard';
 import { useEffect, useState, useContext } from 'react';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import AuthModal from './components/AuthModal';function AppContent() {
@@ -41,6 +42,7 @@ import AuthModal from './components/AuthModal';function AppContent() {
   const navItems = [
     { name: 'Roadmaps', path: '/roadmap', icon: BookOpen },
     { name: 'Challenges', path: '/challenges', icon: Trophy },
+    { name: 'Leaderboard', path: '/leaderboard', icon: Award },
     { name: 'Playground', path: '/', icon: Code2 }
   ];
 
@@ -277,6 +279,7 @@ import AuthModal from './components/AuthModal';function AppContent() {
           <Route path="/topic/:id" element={<TopicDetail />} />
           <Route path="/topic/:id/concept/:conceptIndex" element={<ConceptDetail />} />
           <Route path="/challenges" element={<Challenges />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
         </Routes>
       </main>
 

@@ -16,6 +16,17 @@ export default function AuthModal() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    if (authModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [authModalOpen]);
+
   if (!authModalOpen) return null;
 
   const handleTabChange = (tab) => {

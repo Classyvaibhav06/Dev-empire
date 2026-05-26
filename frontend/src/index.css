@@ -220,3 +220,16 @@ input:focus, textarea:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 1px var(--color-primary);
 }
+
+/* ══════════════════════════════════════
+   DRAWER SHIFT (UI Adjustments)
+   ══════════════════════════════════════ */
+body.drawer-open .drawer-shift-element {
+  transform: translateX(calc(-100vw + 7rem));
+}
+@media (min-width: 1024px) {
+  body.drawer-open .drawer-shift-element {
+    transform: translateX(calc(-100vw + 11rem));
+  }
+}
+

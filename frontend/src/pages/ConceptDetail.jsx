@@ -36,12 +36,6 @@ function RoadmapNode({ children, active = false, muted = false, tone = 'default'
     if (onShowDetails && details) {
       onShowDetails(details);
     }
-    if (targetId) {
-      const element = document.getElementById(targetId);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
   };
 
   return (
@@ -283,7 +277,9 @@ export default function ConceptDetail() {
   const { id, conceptIndex } = useParams();
   const { token, updateUserStats } = React.useContext(AuthContext);
   const concept = getConceptDetail(id, conceptIndex);
-  const [selectedAnswer, setSelectedAnswer] = React.useState(null);
+  // Support both new `tests` array and legacy `test` object
+  const conceptTests = concept.tests || (concept.test ? [concept.test] : []);
+  const [selectedAnswers, setSelectedAnswers] = React.useState({});
   const [activeNodeDetail, setActiveNodeDetail] = React.useState(null);
   const [toastMessage, setToastMessage] = React.useState(null);
 
@@ -296,23 +292,25 @@ export default function ConceptDetail() {
     setActiveNodeDetail(details);
   };
 
-  const handleSelectAnswer = async (index) => {
-    if (selectedAnswer !== null) return; // Prevent multiple submissions
-    setSelectedAnswer(index);
+  const handleSelectAnswer = async (qIndex, optionIndex) => {
+    if (selectedAnswers[qIndex] !== undefined) return; // Prevent multiple submissions for this question
+    setSelectedAnswers(prev => ({ ...prev, [qIndex]: optionIndex }));
     try {
       const savedScores = localStorage.getItem('concept_scores') ? JSON.parse(localStorage.getItem('concept_scores')) : {};
-      const key = `${id}_concept_${conceptIndex}`;
-      const isCorrect = index === concept.test.answer;
+      const key = `${id}_concept_${conceptIndex}_q_${qIndex}`;
+      const testObj = conceptTests[qIndex];
+      const isCorrect = optionIndex === testObj.answer;
+      
       savedScores[key] = {
         score: isCorrect ? 1 : 0,
-        selected: index,
+        selected: optionIndex,
         conceptTitle: concept.title,
         topicId: id,
         topicTitle: concept.topic.title,
         timestamp: new Date().toISOString()
       };
       localStorage.setItem('concept_scores', JSON.stringify(savedScores));
-      showToast(isCorrect ? "🎉 Concept Check Passed!" : "❌ Concept Check Failed. Review and retry.");
+      showToast(isCorrect ? "🎉 Concept Check Passed!" : "❌ Concept Check Failed. You cannot retry.");
 
       if (token) {
         try {
@@ -325,7 +323,7 @@ export default function ConceptDetail() {
             body: JSON.stringify({
               conceptKey: key,
               score: isCorrect ? 1 : 0,
-              selectedOption: index,
+              selectedOption: optionIndex,
               conceptTitle: concept.title,
               topicId: id,
               topicTitle: concept.topic.title
@@ -336,6 +334,9 @@ export default function ConceptDetail() {
             if (result.xpAdded > 0) {
               updateUserStats(result.newXp, result.newLevel);
               showToast(`🎉 Concept Check Passed! +${result.xpAdded} XP Earned!`);
+            } else if (result.locked && isCorrect) {
+               // They already answered this before
+               showToast(`✓ Correct! (Already answered previously)`);
             }
           }
         } catch (e) {
@@ -348,8 +349,22 @@ export default function ConceptDetail() {
   };
 
   React.useEffect(() => {
-    setSelectedAnswer(null);
+    setSelectedAnswers({});
   }, [id, conceptIndex]);
+
+  React.useEffect(() => {
+    if (activeNodeDetail) {
+      document.body.style.overflow = 'hidden';
+      document.body.classList.add('drawer-open');
+    } else {
+      document.body.style.overflow = '';
+      document.body.classList.remove('drawer-open');
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.classList.remove('drawer-open');
+    };
+  }, [activeNodeDetail]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 w-full animate-fade-in relative z-10">
@@ -472,46 +487,70 @@ export default function ConceptDetail() {
             </pre>
           </section>
 
-          {concept.test && (
+          {conceptTests.length > 0 && (
             <section className="animate-fade-in">
               <h2 className="text-xl font-black mb-5 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-warning" />
-                Concept Check
+                Concept Check ({conceptTests.length} Questions)
               </h2>
-              <Card hover={false} className="!p-6 border-warning/20 bg-warning/5">
-                <h3 className="text-base font-bold mb-6 text-textMain">{concept.test.question}</h3>
-                <div className="grid grid-cols-1 gap-3">
-                  {concept.test.options.map((option, index) => {
-                    const isSelected = selectedAnswer === index;
-                    const isCorrect = index === concept.test.answer;
+              <div className="space-y-6">
+                {conceptTests.map((testItem, qIndex) => (
+                  <Card key={qIndex} hover={false} className="!p-6 border-warning/20 bg-warning/5">
+                    <h3 className="text-base font-bold mb-6 text-textMain">
+                      <span className="text-warning mr-2">Q{qIndex + 1}.</span> 
+                      {testItem.question}
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3">
+                      {testItem.options.map((option, optionIndex) => {
+                        const isSelected = selectedAnswers[qIndex] === optionIndex;
+                        const hasAnswered = selectedAnswers[qIndex] !== undefined;
+                        const isCorrectOption = optionIndex === testItem.answer;
+                        
+                        // Determine styling based on whether user has answered
+                        let buttonStyle = 'surface border-surfaceBorder hover:border-primary/50';
+                        if (hasAnswered) {
+                          if (isSelected && isCorrectOption) {
+                            buttonStyle = 'bg-success/10 border-success text-success';
+                          } else if (isSelected && !isCorrectOption) {
+                            buttonStyle = 'bg-danger/10 border-danger text-danger';
+                          } else if (isCorrectOption) {
+                            // Show correct answer lightly if they got it wrong
+                            buttonStyle = 'bg-success/5 border-success/30 text-success opacity-80';
+                          } else {
+                            // Dim other wrong options
+                            buttonStyle = 'surface border-surfaceBorder opacity-50 cursor-not-allowed';
+                          }
+                        }
 
-                    return (
-                      <button
-                        key={index}
-                        onClick={() => handleSelectAnswer(index)}
-                        className={`w-full text-left p-4 rounded-xl border transition-all cursor-pointer ${
-                          isSelected
-                            ? isCorrect
-                              ? 'bg-success/10 border-success text-success'
-                              : 'bg-danger/10 border-danger text-danger'
-                            : 'surface border-surfaceBorder hover:border-primary/50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="font-semibold text-sm">{option}</span>
-                          {isSelected && (isCorrect ? <CheckCircle className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />)}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                {selectedAnswer !== null && (
-                  <div className="mt-6 p-4 rounded-xl bg-surface border border-surfaceBorder text-sm text-textMuted leading-relaxed animate-slide-up">
-                    <span className="font-bold text-textMain">{selectedAnswer === concept.test.answer ? '🎉 Correct!' : '❌ Review and try again.'}</span>{' '}
-                    {concept.test.explanation}
-                  </div>
-                )}
-              </Card>
+                        return (
+                          <button
+                            key={optionIndex}
+                            onClick={() => handleSelectAnswer(qIndex, optionIndex)}
+                            disabled={hasAnswered}
+                            className={`w-full text-left p-4 rounded-xl border transition-all ${
+                              hasAnswered ? 'cursor-default' : 'cursor-pointer'
+                            } ${buttonStyle}`}
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="font-semibold text-sm">{option}</span>
+                              {hasAnswered && isCorrectOption && <CheckCircle className="w-5 h-5 shrink-0 text-success" />}
+                              {isSelected && !isCorrectOption && <AlertCircle className="w-5 h-5 shrink-0 text-danger" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedAnswers[qIndex] !== undefined && (
+                      <div className="mt-6 p-4 rounded-xl bg-surface border border-surfaceBorder text-sm text-textMuted leading-relaxed animate-slide-up">
+                        <span className="font-bold text-textMain">
+                          {selectedAnswers[qIndex] === testItem.answer ? '🎉 Correct!' : '❌ Incorrect.'}
+                        </span>{' '}
+                        {testItem.explanation}
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
             </section>
           )}
         </main>
@@ -888,7 +927,7 @@ Guide the student step-by-step. Keep explanations clear, engaging, and in line w
       </div>
 
       {/* Drawer Content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-background/25">
+      <div className="flex-1 overflow-y-auto p-6 pb-24 space-y-6 bg-background/25">
         {drawerTab === 'resources' ? (
           <>
             <div>
@@ -1022,7 +1061,7 @@ Guide the student step-by-step. Keep explanations clear, engaging, and in line w
       </div>
 
       {/* Footer Close */}
-      <div className="p-4 border-t border-surfaceBorder bg-surfaceLight shrink-0 flex justify-end">
+      <div className="p-4 border-t border-surfaceBorder bg-surface shrink-0 flex justify-end">
         <button 
           onClick={() => setActiveNodeDetail(null)}
           className="px-5 py-2.5 bg-primary text-white font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-primary-hover transition-all cursor-pointer"

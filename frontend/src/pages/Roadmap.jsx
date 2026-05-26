@@ -380,7 +380,7 @@ Guide the student step-by-step. Keep explanations clear, engaging, and in line w
       </div>
 
       {/* Drawer Content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-background/25">
+      <div className="flex-1 overflow-y-auto p-6 pb-24 space-y-6 bg-background/25">
         {drawerTab === 'resources' ? (
           <>
             <div>
@@ -458,7 +458,7 @@ Guide the student step-by-step. Keep explanations clear, engaging, and in line w
                       rel="noopener noreferrer"
                       className="flex items-center justify-between p-3.5 bg-surface border border-surfaceBorder rounded-xl hover:border-primary group transition-all text-xs"
                     >
-                      <span className="font-semibold text-textMuted group-hover:text-primary transition-colors flex items-center gap-2">
+                      <span className="font-semibold text-textMuted group-hover:text-primary transition-colors flex-center gap-2">
                         <BookOpen className="w-4 h-4 text-textMuted" />
                         {res.name}
                       </span>
@@ -539,7 +539,7 @@ Guide the student step-by-step. Keep explanations clear, engaging, and in line w
       </div>
 
       {/* Footer Deep dive */}
-      <div className="p-4 border-t border-surfaceBorder bg-surfaceLight shrink-0 flex justify-end">
+      <div className="p-4 border-t border-surfaceBorder bg-surface shrink-0 flex justify-end">
         <Link 
           to={`/topic/${activeTopic.id}`}
           onClick={() => setActiveTopic(null)}

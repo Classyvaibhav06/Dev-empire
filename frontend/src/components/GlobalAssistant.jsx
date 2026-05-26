@@ -172,6 +172,20 @@ export default function GlobalAssistant() {
     }
   }, [chatOpen, location]);
 
+  useEffect(() => {
+    if (chatOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.classList.add('drawer-open');
+    } else {
+      document.body.style.overflow = '';
+      document.body.classList.remove('drawer-open');
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.classList.remove('drawer-open');
+    };
+  }, [chatOpen]);
+
   const loadScores = () => {
     try {
       const saved = localStorage.getItem('concept_scores');
@@ -426,7 +440,7 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
   return (
     <>
       {/* ── FLOATING CHAT BUBBLE ── */}
-      <div className="fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-40">
+      <div className={`fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-40 transition-transform duration-500 ease-in-out drawer-shift-element ${chatOpen ? 'opacity-0 pointer-events-none' : ''}`}>
         <button
           onClick={() => setChatOpen(!chatOpen)}
           className="relative group flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] transition-all duration-300 hover:scale-110 cursor-pointer overflow-hidden border border-white/20"

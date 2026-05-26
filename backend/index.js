@@ -518,43 +518,49 @@ app.post('/api/user/progress', authenticateToken, async (req, res) => {
   }
 });
 
-// Sync Quiz Score & Award +15 XP
+// Sync Quiz Score & Award +10 XP (One Attempt Only)
 app.post('/api/user/concept-score', authenticateToken, async (req, res) => {
   const { conceptKey, score, selectedOption, conceptTitle, topicId, topicTitle } = req.body;
   if (!conceptKey || score === undefined) return res.status(400).json({ error: 'Missing conceptKey or score' });
 
   try {
-    // 1. Check if user already passed this specific concept check
-    const checkPassed = await db.query(
-      'SELECT id FROM concept_scores WHERE user_id = $1 AND concept_key = $2 AND score = 1',
-      [req.user.id, conceptKey]
-    );
-    const alreadyPassed = checkPassed.rows.length > 0;
-
-    // 2. Insert or update the quiz attempt
-    await db.query(`
+    // 1. Insert the quiz attempt. DO NOTHING if they already answered this question.
+    const insertResult = await db.query(`
       INSERT INTO concept_scores (user_id, concept_key, score, selected_option, concept_title, topic_id, topic_title)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
-      ON CONFLICT (user_id, concept_key)
-      DO UPDATE SET score = $3, selected_option = $4, concept_title = $5, topic_id = $6, topic_title = $7
+      ON CONFLICT (user_id, concept_key) DO NOTHING
+      RETURNING id
     `, [req.user.id, conceptKey, score, selectedOption, conceptTitle, topicId, topicTitle]);
 
-    // 3. Award 15 XP if they passed for the first time
-    let xpAdded = 0;
-    let newXp = 0;
-    let newLevel = 1;
+    const wasInserted = insertResult.rows.length > 0;
 
-    if (score === 1 && !alreadyPassed) {
-      xpAdded = 15;
-      const userXpQuery = await db.query('SELECT xp FROM users WHERE id = $1', [req.user.id]);
-      const currentXp = userXpQuery.rows[0]?.xp || 0;
-      newXp = currentXp + xpAdded;
+    // 2. Award 10 XP if they passed AND this was their first attempt (wasInserted)
+    let xpAdded = 0;
+    const userXpQuery = await db.query('SELECT xp, level FROM users WHERE id = $1', [req.user.id]);
+    let newXp = userXpQuery.rows[0]?.xp || 0;
+    let newLevel = userXpQuery.rows[0]?.level || 1;
+
+    if (score === 1 && wasInserted) {
+      xpAdded = 10;
+      newXp += xpAdded;
       newLevel = Math.floor(newXp / 100) + 1;
 
       await db.query('UPDATE users SET xp = $1, level = $2 WHERE id = $3', [newXp, newLevel, req.user.id]);
     }
 
-    res.json({ success: true, xpAdded, newXp, newLevel });
+    res.json({ success: true, xpAdded, newXp, newLevel, locked: !wasInserted });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get XP Leaderboard
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT id, username, level, xp FROM users ORDER BY xp DESC LIMIT 50'
+    );
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

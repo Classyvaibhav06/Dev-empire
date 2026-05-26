@@ -20,7 +20,9 @@ import {
   Zap,
   X,
   Send,
-  Trash2
+  Trash2,
+  Heart,
+  ExternalLink
 } from 'lucide-react';
 import { Card, Badge } from '../components/ui/Shared';
 import { getTopicById } from '../utils/topicContent';
@@ -58,6 +60,20 @@ export default function TopicDetail() {
     setIsCompleted(completedTopics.includes(id));
     setLoading(false);
   }, [id]);
+
+  useEffect(() => {
+    if (chatOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.classList.add('drawer-open');
+    } else {
+      document.body.style.overflow = '';
+      document.body.classList.remove('drawer-open');
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.classList.remove('drawer-open');
+    };
+  }, [chatOpen]);
 
   const progressItems = useMemo(() => {
     if (!topic) return [];
@@ -190,6 +206,103 @@ Guide the student step-by-step. Keep explanations clear, engaging, and in line w
                 throw new Error(data.error);
               }
 
+              setChatHistory((prev) => {
+                if (prev.length === 0) return prev;
+                const last = prev[prev.length - 1];
+                if (last && last.role === 'assistant') {
+                  return [
+                    ...prev.slice(0, -1),
+                    {
+                      ...last,
+                      content: last.content + (data.content || ''),
+                      reasoning: last.reasoning + (data.reasoning || '')
+                    }
+                  ];
+                }
+                return prev;
+              });
+            } catch (err) {
+              console.error('Failed to parse line:', line, err);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Chat error:', err);
+      setChatHistory((prev) => {
+        if (prev.length === 0) return prev;
+        const last = prev[prev.length - 1];
+        if (last && last.role === 'assistant') {
+          return [
+            ...prev.slice(0, -1),
+            { ...last, content: 'Sorry, I encountered an error while retrieving the response. Please try again.' }
+          ];
+        }
+        return prev;
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const startAiTutorSession = async (conceptName) => {
+    setChatOpen(true);
+    setIsGenerating(true);
+
+    const cleanConceptName = conceptName.split('(')[0].trim();
+    const userMsgText = `I want to focus on learning about "${cleanConceptName}" under the topic "${topic.title}". Please guide me step-by-step with clear explanations and code examples!`;
+    const newUserMsg = { role: 'user', content: userMsgText };
+    const updatedHistory = [...chatHistory, newUserMsg];
+    setChatHistory(updatedHistory);
+
+    const newAssistantMsg = { role: 'assistant', content: '', reasoning: '' };
+    setChatHistory((prev) => [...prev, newAssistantMsg]);
+
+    try {
+      const systemPrompt = `You are the Dev Empire AI Study Mentor, an expert programming assistant specializing in "${topic.title}".
+The student wants to focus specifically on the sub-topic "${cleanConceptName}".
+Provide a targeted, high-quality, step-by-step interactive explanation of "${cleanConceptName}" with clear examples, and test their understanding at the end. Use markdown formatting.`;
+
+      const payloadMessages = [
+        { role: 'system', content: systemPrompt },
+        ...updatedHistory
+      ];
+
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          messages: payloadMessages,
+          mode: aiMode
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response from AI mentor.');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          if (trimmed === 'data: [DONE]') continue;
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(trimmed.slice(6));
+              if (data.error) {
+                throw new Error(data.error);
+              }
               setChatHistory((prev) => {
                 if (prev.length === 0) return prev;
                 const last = prev[prev.length - 1];
@@ -508,31 +621,114 @@ Guide the student step-by-step. Keep explanations clear, engaging, and in line w
             )}
 
             {activeTab === 'resources' && (
-              <div className="space-y-8 animate-slide-up">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-accent" /> Recommended Resources
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {topic.resources.map((resource, index) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start animate-slide-up">
+                {/* Free Resources Card */}
+                <div className="bg-surface border border-surfaceBorder rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                  <div className="flex items-center gap-2.5 mb-6">
+                    <Heart className="w-5 h-5 text-success animate-pulse" fill="currentColor" />
+                    <h3 className="font-black text-base text-textMain">Free Resources</h3>
+                  </div>
+                  <div className="space-y-4.5">
+                    {/* Dedicated Roadmap Link */}
+                    <Link
+                      to="/roadmap"
+                      className="flex items-center gap-3.5 p-4 rounded-2xl bg-background/50 border border-surfaceBorder hover:border-primary group transition-all"
+                    >
+                      <Badge variant="primary" className="!bg-black !text-white dark:!bg-white dark:!text-black !text-[8px] uppercase tracking-widest shrink-0 font-black px-2 py-0.5">Roadmap</Badge>
+                      <span className="text-xs font-bold text-textMuted group-hover:text-primary transition-colors flex-1">
+                        Visit the Dedicated {topic.title} Roadmap
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-textDim group-hover:translate-x-1 transition-transform" />
+                    </Link>
+
+                    {/* Dynamic Courses / Docs from topic.resources */}
+                    {topic.resources?.map((res, index) => (
+                      <a
+                        key={index}
+                        href={res.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3.5 p-4 rounded-2xl bg-background/50 border border-surfaceBorder hover:border-primary group transition-all"
+                      >
+                        <Badge variant="success" className="!text-[8px] uppercase tracking-widest shrink-0 font-black px-2 py-0.5">
+                          {res.type === 'Documentation' || res.type === 'Specification' ? 'Course' : res.type || 'Doc'}
+                        </Badge>
+                        <span className="text-xs font-bold text-textMuted group-hover:text-primary transition-colors flex-1 truncate">
+                          {res.name}
+                        </span>
+                        <ExternalLink className="w-3.5 h-3.5 text-textDim group-hover:text-primary transition-colors" />
+                      </a>
+                    ))}
+
+                    {/* Video Lectures */}
+                    {topic.videos?.map((vidUrl, index) => {
+                      const isEmbed = vidUrl.includes('embed/');
+                      const watchUrl = isEmbed ? vidUrl.replace('embed/', 'watch?v=') : vidUrl;
+                      
+                      return (
+                        <div key={index} className="flex flex-col gap-2 p-4 rounded-2xl bg-background/50 border border-surfaceBorder hover:border-primary group transition-all overflow-hidden">
+                          <div className="flex items-center gap-3.5">
+                            <Badge variant="warning" className="!bg-red-500/10 !text-red-500 !border-red-500/20 !text-[8px] uppercase tracking-widest shrink-0 font-black px-2 py-0.5">YouTube</Badge>
+                            <span className="text-xs font-bold text-textMuted group-hover:text-primary transition-colors flex-1 truncate">
+                              {topic.title} Tutorial Part {index + 1}
+                            </span>
+                            <a href={watchUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] uppercase font-bold text-textDim hover:text-primary transition-colors">
+                              Watch <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                          {isEmbed && (
+                            <div className="mt-2 aspect-video w-full rounded-xl overflow-hidden border border-surfaceBorder">
+                              <iframe
+                                width="100%"
+                                height="100%"
+                                src={vidUrl}
+                                title={`${topic.title} Tutorial`}
+                                frameBorder="0"
+                                allowFullScreen
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Explorer/Feed Link */}
                     <a
-                      key={index}
-                      href={resource.url}
+                      href={`https://www.google.com/search?q=${encodeURIComponent(topic.title + ' top articles learning resources')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="surface p-5 rounded-xl border border-surfaceBorder flex items-center justify-between hover:border-primary group transition-all"
+                      className="flex items-center gap-3.5 p-4 rounded-2xl bg-background/50 border border-surfaceBorder hover:border-primary group transition-all"
                     >
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shrink-0">
-                          <BookOpen className="w-5 h-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-sm text-textMain group-hover:text-primary transition-colors truncate">{resource.name}</h3>
-                          <span className="text-[10px] text-textDim uppercase tracking-wider">{resource.type}</span>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-textDim group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />
+                      <Badge variant="accent" className="!bg-pink-600/10 !text-pink-500 !border-pink-500/20 !text-[8px] uppercase tracking-widest shrink-0 font-black px-2 py-0.5">Feed</Badge>
+                      <span className="text-xs font-bold text-textMuted group-hover:text-primary transition-colors flex-1">
+                        Explore top posts about {topic.title}
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-textDim group-hover:translate-x-1 transition-transform" />
                     </a>
-                  ))}
+                  </div>
+                </div>
+
+                {/* AI Tutor Card */}
+                <div className="bg-surface border border-surfaceBorder rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                  <div className="flex items-center gap-2.5 mb-6">
+                    <Zap className="w-5 h-5 text-primary" fill="currentColor" />
+                    <h3 className="font-black text-base text-textMain">AI Tutor</h3>
+                  </div>
+                  <div className="space-y-4.5">
+                    {topic.keyConcepts?.map((concept, index) => (
+                      <button
+                        key={index}
+                        onClick={() => startAiTutorSession(concept)}
+                        className="w-full flex items-center gap-3.5 p-4 rounded-2xl bg-background/50 border border-surfaceBorder hover:border-primary group transition-all text-left cursor-pointer"
+                      >
+                        <Badge variant="success" className="!text-[8px] uppercase tracking-widest shrink-0 font-black px-2 py-0.5">Course</Badge>
+                        <span className="text-xs font-bold text-textMuted group-hover:text-primary transition-colors flex-1 truncate">
+                          {concept.split('(')[0].trim()}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-textDim group-hover:translate-x-1 transition-transform" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
