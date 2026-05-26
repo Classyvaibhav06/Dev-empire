@@ -16,21 +16,33 @@ export const learningPaths = [
             title: "How the Web Works",
             level: "Beginner",
             description: "Understand the basics of the internet, HTTP/HTTPS, DNS, and how browsers render web pages.",
-            videos: ["https://www.youtube.com/embed/7_LPdttKXPc"]
+            videos: [
+              "https://www.youtube.com/embed/7_LPdttKXPc",
+              "https://www.youtube.com/embed/zN8YNNjcaZY",
+              "https://www.youtube.com/embed/oj4TVUmbQ6w"
+            ]
           },
           {
             id: "html-basics",
             title: "HTML Basics & Semantics",
             level: "Beginner",
             description: "Learn the foundational structure of the web. Cover elements, attributes, headings, and semantic tags.",
-            videos: ["https://www.youtube.com/embed/qz0aGYrrlhU"]
+            videos: [
+              "https://www.youtube.com/embed/qz0aGYrrlhU",
+              "https://www.youtube.com/embed/kUMe1FH4CHE",
+              "https://www.youtube.com/embed/mbeT8mpmtHA"
+            ]
           },
           {
             id: "css-basics",
             title: "CSS Basics & Box Model",
             level: "Beginner",
             description: "Learn how to style your HTML elements. Understand the CSS Box Model, selectors, and layout basics.",
-            videos: ["https://www.youtube.com/embed/1Rs2ND1ryYc"]
+            videos: [
+              "https://www.youtube.com/embed/1Rs2ND1ryYc",
+              "https://www.youtube.com/embed/yfoY53QXEnI",
+              "https://www.youtube.com/embed/OXGznpKZ_sA"
+            ]
           }
         ]
       },
@@ -43,14 +55,22 @@ export const learningPaths = [
             title: "JavaScript Fundamentals",
             level: "Intermediate",
             description: "Add logic and interactivity to your websites using variables, functions, and control flow.",
-            videos: ["https://www.youtube.com/embed/W6NZfCO5SIk"]
+            videos: [
+              "https://www.youtube.com/embed/W6NZfCO5SIk",
+              "https://www.youtube.com/embed/hdI2bqOjy3c",
+              "https://www.youtube.com/embed/PkZNo7MFNFg"
+            ]
           },
           {
             id: "react-basics",
             title: "React Fundamentals",
             level: "Intermediate",
             description: "Learn functional components, props, state, and rendering dynamic interfaces.",
-            videos: ["https://www.youtube.com/embed/bMknfKXIFA8"]
+            videos: [
+              "https://www.youtube.com/embed/bMknfKXIFA8",
+              "https://www.youtube.com/embed/SqcY0GlETPk",
+              "https://www.youtube.com/embed/Ke90Tje7VS0"
+            ]
           }
         ]
       }
@@ -73,7 +93,11 @@ export const learningPaths = [
             title: "Node.js & Express REST APIs",
             level: "Intermediate",
             description: "Learn how to build servers with Node.js and create RESTful APIs using the Express framework.",
-            videos: ["https://www.youtube.com/embed/Oe421EPjeBE"]
+            videos: [
+              "https://www.youtube.com/embed/Oe421EPjeBE",
+              "https://www.youtube.com/embed/fBNz5xF-Kx4",
+              "https://www.youtube.com/embed/RLtyhwFtXQA"
+            ]
           }
         ]
       },
@@ -86,7 +110,11 @@ export const learningPaths = [
             title: "MongoDB & Mongoose ODM",
             level: "Intermediate",
             description: "Understand NoSQL databases, connect to MongoDB, and perform CRUD operations with Mongoose.",
-            videos: ["https://www.youtube.com/embed/DZBGEVgL2eE"]
+            videos: [
+              "https://www.youtube.com/embed/DZBGEVgL2eE",
+              "https://www.youtube.com/embed/-56x56UppqQ",
+              "https://www.youtube.com/embed/ofme2o29ngU"
+            ]
           }
         ]
       }
@@ -173,14 +201,22 @@ export const learningPaths = [
             title: "Python Fundamentals",
             level: "Beginner",
             description: "Learn Python syntax, data structures, object-oriented concepts, and basic scripting.",
-            videos: ["https://www.youtube.com/embed/rfscVS0vtbw"]
+            videos: [
+              "https://www.youtube.com/embed/rfscVS0vtbw",
+              "https://www.youtube.com/embed/_uQrJ0TkZlc",
+              "https://www.youtube.com/embed/YYXdXT2l-Gg"
+            ]
           },
           {
             id: "numpy-pandas",
             title: "Data Analysis with NumPy & Pandas",
             level: "Intermediate",
             description: "Perform data structures transformations, indexing, grouping, and statistical operations.",
-            videos: ["https://www.youtube.com/embed/r-uOLxNrNk8"]
+            videos: [
+              "https://www.youtube.com/embed/r-uOLxNrNk8",
+              "https://www.youtube.com/embed/vmEHCJofslg",
+              "https://www.youtube.com/embed/e60ItwlZTKM"
+            ]
           }
         ]
       },
@@ -193,14 +229,22 @@ export const learningPaths = [
             title: "Intro to Neural Networks",
             level: "Advanced",
             description: "Understand perceptrons, backpropagation, and activation functions inside Deep Learning.",
-            videos: ["https://www.youtube.com/embed/aircAruvnKk"]
+            videos: [
+              "https://www.youtube.com/embed/aircAruvnKk",
+              "https://www.youtube.com/embed/IHZwWFHWa-w",
+              "https://www.youtube.com/embed/oV13qMfKGmk"
+            ]
           },
           {
             id: "nlp-llms",
             title: "Large Language Models & Prompting",
             level: "Advanced",
             description: "Learn transformer architectures, fine-tuning techniques, and intelligent agent orchestrations.",
-            videos: ["https://www.youtube.com/embed/zjkBMFhNj_g"]
+            videos: [
+              "https://www.youtube.com/embed/zjkBMFhNj_g",
+              "https://www.youtube.com/embed/wjZofJX0v4M",
+              "https://www.youtube.com/embed/X-AWdfSFCHQ"
+            ]
           }
         ]
       }
@@ -223,7 +267,11 @@ export const detailedTopics = {
       "Request/Response Cycle",
       "How Browsers Parse HTML/CSS/JS"
     ],
-    videos: ["https://www.youtube.com/embed/7_LPdttKXPc"],
+    videos: [
+      "https://www.youtube.com/embed/7_LPdttKXPc",
+      "https://www.youtube.com/embed/zN8YNNjcaZY",
+      "https://www.youtube.com/embed/oj4TVUmbQ6w"
+    ],
     practice: [
       {
         type: "mcq",
@@ -263,7 +311,11 @@ export const detailedTopics = {
       "Semantic HTML (nav, section, article, header, footer)",
       "Accessibility (a11y) & SEO best practices"
     ],
-    videos: ["https://www.youtube.com/embed/qz0aGYrrlhU"],
+    videos: [
+      "https://www.youtube.com/embed/qz0aGYrrlhU",
+      "https://www.youtube.com/embed/kUMe1FH4CHE",
+      "https://www.youtube.com/embed/mbeT8mpmtHA"
+    ],
     practice: [
       {
         type: "mcq",
@@ -304,7 +356,11 @@ export const detailedTopics = {
       "Display Properties (block, inline, inline-block, flex, grid)",
       "Colors, Typography, and Transitions"
     ],
-    videos: ["https://www.youtube.com/embed/1Rs2ND1ryYc"],
+    videos: [
+      "https://www.youtube.com/embed/1Rs2ND1ryYc",
+      "https://www.youtube.com/embed/yfoY53QXEnI",
+      "https://www.youtube.com/embed/OXGznpKZ_sA"
+    ],
     practice: [
       {
         type: "mcq",
@@ -345,7 +401,11 @@ export const detailedTopics = {
       "DOM Manipulation and Event Listeners",
       "ES6+ features (destructuring, array methods like map/filter)"
     ],
-    videos: ["https://www.youtube.com/embed/W6NZfCO5SIk"],
+    videos: [
+      "https://www.youtube.com/embed/W6NZfCO5SIk",
+      "https://www.youtube.com/embed/hdI2bqOjy3c",
+      "https://www.youtube.com/embed/PkZNo7MFNFg"
+    ],
     practice: [
       {
         type: "mcq",
@@ -386,7 +446,11 @@ export const detailedTopics = {
       "Handling Events & Forms",
       "Conditional Rendering & Lists rendering"
     ],
-    videos: ["https://www.youtube.com/embed/bMknfKXIFA8"],
+    videos: [
+      "https://www.youtube.com/embed/bMknfKXIFA8",
+      "https://www.youtube.com/embed/SqcY0GlETPk",
+      "https://www.youtube.com/embed/Ke90Tje7VS0"
+    ],
     practice: [
       {
         type: "mcq",
@@ -427,7 +491,11 @@ export const detailedTopics = {
       "Middleware concept and parsing requests",
       "API design and Status Codes"
     ],
-    videos: ["https://www.youtube.com/embed/Oe421EPjeBE"],
+    videos: [
+      "https://www.youtube.com/embed/Oe421EPjeBE",
+      "https://www.youtube.com/embed/fBNz5xF-Kx4",
+      "https://www.youtube.com/embed/RLtyhwFtXQA"
+    ],
     practice: [
       {
         type: "mcq",
@@ -468,7 +536,11 @@ export const detailedTopics = {
       "CRUD operations (find, create, updateOne, deleteMany)",
       "Relationships and DB references"
     ],
-    videos: ["https://www.youtube.com/embed/DZBGEVgL2eE"],
+    videos: [
+      "https://www.youtube.com/embed/DZBGEVgL2eE",
+      "https://www.youtube.com/embed/-56x56UppqQ",
+      "https://www.youtube.com/embed/ofme2o29ngU"
+    ],
     practice: [
       {
         type: "mcq",
@@ -509,7 +581,11 @@ export const detailedTopics = {
       "Object-Oriented Programming (Classes & Inheritance)",
       "File operations & Exception handling"
     ],
-    videos: ["https://www.youtube.com/embed/rfscVS0vtbw"],
+    videos: [
+      "https://www.youtube.com/embed/rfscVS0vtbw",
+      "https://www.youtube.com/embed/_uQrJ0TkZlc",
+      "https://www.youtube.com/embed/YYXdXT2l-Gg"
+    ],
     practice: [
       {
         type: "mcq",
@@ -550,7 +626,11 @@ export const detailedTopics = {
       "Data Selection, Filtering & Grouping",
       "Reading CSV/JSON files and merging datasets"
     ],
-    videos: ["https://www.youtube.com/embed/r-uOLxNrNk8"],
+    videos: [
+      "https://www.youtube.com/embed/r-uOLxNrNk8",
+      "https://www.youtube.com/embed/vmEHCJofslg",
+      "https://www.youtube.com/embed/e60ItwlZTKM"
+    ],
     practice: [
       {
         type: "mcq",
@@ -590,7 +670,11 @@ export const detailedTopics = {
       "Loss Functions and Gradient Descent optimization",
       "Layers: Input, Hidden, and Output layers"
     ],
-    videos: ["https://www.youtube.com/embed/aircAruvnKk"],
+    videos: [
+      "https://www.youtube.com/embed/aircAruvnKk",
+      "https://www.youtube.com/embed/IHZwWFHWa-w",
+      "https://www.youtube.com/embed/oV13qMfKGmk"
+    ],
     practice: [
       {
         type: "mcq",
@@ -631,7 +715,11 @@ export const detailedTopics = {
       "Prompt Engineering techniques (CoT, few-shot)",
       "Agent Frameworks (LangChain, MCP)"
     ],
-    videos: ["https://www.youtube.com/embed/zjkBMFhNj_g"],
+    videos: [
+      "https://www.youtube.com/embed/zjkBMFhNj_g",
+      "https://www.youtube.com/embed/wjZofJX0v4M",
+      "https://www.youtube.com/embed/X-AWdfSFCHQ"
+    ],
     practice: [
       {
         type: "mcq",

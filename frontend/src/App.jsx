@@ -7,6 +7,7 @@ import Roadmap from './pages/Roadmap';
 import TopicDetail from './pages/TopicDetail';
 import ConceptDetail from './pages/ConceptDetail';
 import Leaderboard from './pages/Leaderboard';
+import Playground from './pages/Playground';
 import { useEffect, useState, useContext } from 'react';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import AuthModal from './components/AuthModal';function AppContent() {
@@ -43,7 +44,7 @@ import AuthModal from './components/AuthModal';function AppContent() {
     { name: 'Roadmaps', path: '/roadmap', icon: BookOpen },
     { name: 'Challenges', path: '/challenges', icon: Trophy },
     { name: 'Leaderboard', path: '/leaderboard', icon: Award },
-    { name: 'Playground', path: '/', icon: Code2 }
+    { name: 'Playground', path: '/playground', icon: Code2 }
   ];
 
   return (
@@ -280,6 +281,7 @@ import AuthModal from './components/AuthModal';function AppContent() {
           <Route path="/topic/:id/concept/:conceptIndex" element={<ConceptDetail />} />
           <Route path="/challenges" element={<Challenges />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/playground" element={<Playground />} />
         </Routes>
       </main>
 
@@ -305,7 +307,7 @@ import AuthModal from './components/AuthModal';function AppContent() {
               <ul className="space-y-3">
                 {[
                   { name: 'Roadmaps', path: '/roadmap' },
-                  { name: 'Playground', path: '/' },
+                  { name: 'Playground', path: '/playground' },
                   { name: 'Challenges', path: '/challenges' },
                   { name: 'Community', path: '/' }
                 ].map(item => (

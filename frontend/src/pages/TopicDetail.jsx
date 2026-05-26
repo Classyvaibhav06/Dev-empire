@@ -660,37 +660,72 @@ Provide a targeted, high-quality, step-by-step interactive explanation of "${cle
                       </a>
                     ))}
 
-                    {/* Video Lectures */}
-                    {topic.videos?.map((vidUrl, index) => {
-                      const isEmbed = vidUrl.includes('embed/');
-                      const watchUrl = isEmbed ? vidUrl.replace('embed/', 'watch?v=') : vidUrl;
-                      
-                      return (
-                        <div key={index} className="flex flex-col gap-2 p-4 rounded-2xl bg-background/50 border border-surfaceBorder hover:border-primary group transition-all overflow-hidden">
-                          <div className="flex items-center gap-3.5">
-                            <Badge variant="warning" className="!bg-red-500/10 !text-red-500 !border-red-500/20 !text-[8px] uppercase tracking-widest shrink-0 font-black px-2 py-0.5">YouTube</Badge>
-                            <span className="text-xs font-bold text-textMuted group-hover:text-primary transition-colors flex-1 truncate">
-                              {topic.title} Tutorial Part {index + 1}
-                            </span>
-                            <a href={watchUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] uppercase font-bold text-textDim hover:text-primary transition-colors">
-                              Watch <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </div>
-                          {isEmbed && (
-                            <div className="mt-2 aspect-video w-full rounded-xl overflow-hidden border border-surfaceBorder">
-                              <iframe
-                                width="100%"
-                                height="100%"
-                                src={vidUrl}
-                                title={`${topic.title} Tutorial`}
-                                frameBorder="0"
-                                allowFullScreen
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {/* YouTube Tutorials */}
+                    {topic.videos?.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-textDim px-1 mb-1">
+                          📺 YouTube Tutorials ({topic.videos.length})
+                        </p>
+                        {topic.videos.map((vidUrl, index) => {
+                          const isEmbed = vidUrl.includes('embed/');
+                          const videoId = isEmbed ? vidUrl.split('embed/')[1].split('?')[0] : '';
+                          const watchUrl = isEmbed ? `https://www.youtube.com/watch?v=${videoId}` : vidUrl;
+                          const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
+                          const labels = ['Beginner Crash Course', 'Full In-Depth Tutorial', 'Advanced Deep Dive'];
+                          const label = labels[index] || `Tutorial Part ${index + 1}`;
+
+                          return (
+                            <details key={index} className="group/vid rounded-2xl bg-background/50 border border-surfaceBorder hover:border-red-500/40 transition-all overflow-hidden open:border-red-500/40">
+                              <summary className="flex items-center gap-3 p-3.5 cursor-pointer list-none select-none">
+                                {/* Thumbnail */}
+                                {thumbnailUrl ? (
+                                  <div className="w-14 h-10 rounded-lg overflow-hidden shrink-0 border border-surfaceBorder">
+                                    <img src={thumbnailUrl} alt="thumbnail" className="w-full h-full object-cover" />
+                                  </div>
+                                ) : (
+                                  <div className="w-14 h-10 rounded-lg bg-red-500/10 shrink-0 flex items-center justify-center">
+                                    <PlayCircle className="w-5 h-5 text-red-500" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-0.5">
+                                    <Badge variant="warning" className="!bg-red-500/10 !text-red-500 !border-red-500/20 !text-[8px] uppercase tracking-widest shrink-0 font-black px-1.5 py-0">YT</Badge>
+                                    <span className="text-[9px] text-textDim font-bold">#{index + 1}</span>
+                                  </div>
+                                  <span className="text-xs font-bold text-textMuted group-hover/vid:text-textMain transition-colors truncate block">{label}</span>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <a
+                                    href={watchUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex items-center gap-1 text-[9px] uppercase font-black text-textDim hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-primary/10"
+                                  >
+                                    Open <ExternalLink className="w-2.5 h-2.5" />
+                                  </a>
+                                  <span className="text-textDim text-[10px] group-open/vid:rotate-180 transition-transform duration-200">▾</span>
+                                </div>
+                              </summary>
+                              {/* Embedded player (only rendered when open) */}
+                              <div className="px-3.5 pb-3.5">
+                                <div className="aspect-video w-full rounded-xl overflow-hidden border border-surfaceBorder">
+                                  <iframe
+                                    width="100%"
+                                    height="100%"
+                                    src={vidUrl}
+                                    title={`${topic.title} — ${label}`}
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </div>
+                              </div>
+                            </details>
+                          );
+                        })}
+                      </div>
+                    )}
 
                     {/* Explorer/Feed Link */}
                     <a

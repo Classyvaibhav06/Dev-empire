@@ -380,7 +380,7 @@ Guide the student step-by-step. Keep explanations clear, engaging, and in line w
       </div>
 
       {/* Drawer Content */}
-      <div className="flex-1 overflow-y-auto p-6 pb-24 space-y-6 bg-background/25">
+      <div className="flex-1 overflow-y-auto p-6 pb-32 space-y-6 bg-background/25">
         {drawerTab === 'resources' ? (
           <>
             <div>
@@ -467,6 +467,30 @@ Guide the student step-by-step. Keep explanations clear, engaging, and in line w
                       </span>
                     </a>
                   ))}
+                  
+                  {activeTopic.videos?.map((vidUrl, index) => {
+                    const isEmbed = vidUrl.includes('embed/');
+                    const watchUrl = isEmbed ? vidUrl.replace('embed/', 'watch?v=') : vidUrl;
+                    const labels = ['Crash Course', 'Full Tutorial', 'Deep Dive'];
+                    const label = labels[index] || `Video ${index + 1}`;
+                    return (
+                      <a 
+                        key={`vid-${index}`}
+                        href={watchUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3.5 bg-background/50 border border-surfaceBorder rounded-xl hover:border-red-500/40 group transition-all text-xs"
+                      >
+                        <span className="font-semibold text-textMuted group-hover:text-red-400 transition-colors flex items-center gap-2">
+                          <PlayCircle className="w-4 h-4 text-red-500" />
+                          YouTube: {label}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-widest text-red-400 font-bold bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
+                          Video
+                        </span>
+                      </a>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -539,7 +563,7 @@ Guide the student step-by-step. Keep explanations clear, engaging, and in line w
       </div>
 
       {/* Footer Deep dive */}
-      <div className="p-4 border-t border-surfaceBorder bg-surface shrink-0 flex justify-end">
+      <div className="p-4 border-t border-surfaceBorder bg-surface shrink-0 flex justify-end pr-24">
         <Link 
           to={`/topic/${activeTopic.id}`}
           onClick={() => setActiveTopic(null)}

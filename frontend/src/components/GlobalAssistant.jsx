@@ -47,6 +47,16 @@ export default function GlobalAssistant() {
   const isCreatingSessionRef = useRef(false);
   const lastSyncedChatRef = useRef('');
 
+  // Playground Context State
+  const [playgroundContext, setPlaygroundContext] = useState(null);
+
+  // Listen for playground code updates
+  useEffect(() => {
+    const handleContextUpdate = (e) => setPlaygroundContext(e.detail);
+    window.addEventListener('playgroundCodeUpdate', handleContextUpdate);
+    return () => window.removeEventListener('playgroundCodeUpdate', handleContextUpdate);
+  }, []);
+
   // Load existing chat session from DB when drawer opens (if logged in)
   useEffect(() => {
     if (chatOpen && token) {
@@ -238,10 +248,14 @@ export default function GlobalAssistant() {
       }
     } else if (path === '/roadmap') {
       contextMessage = `The user is currently looking at the main Roadmap list of all learning paths (Frontend, Backend, Fullstack, AI/ML).`;
+    } else if (path === '/playground') {
+      contextMessage = `The user is in the interactive Code Sandbox (Playground).`;
+      if (playgroundContext) {
+        contextMessage += `\n\n[PLAYGROUND CODE CONTEXT]\nHere is the exact code the user currently has written in their editor:\n\`\`\`javascript\n${playgroundContext}\n\`\`\`\nWhen answering, use this code context to provide highly specific debugging or suggestions.`;
+      }
     } else {
-      contextMessage = `The user is on the homepage of Dev Empire.`;
+      contextMessage = `The user is on the homepage or an unknown page of Dev Empire.`;
     }
-
     // Include overall score profile in system context
     const attemptedList = Object.keys(scores);
     const correctCount = Object.values(scores).filter(s => s.score === 1).length;
@@ -658,6 +672,15 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
               )}
               <div ref={messagesEndRef} className="h-4" />
             </div>
+
+            {/* Playground Context Indicator */}
+            {path === '/playground' && playgroundContext && (
+              <div className="mx-4 mt-2 mb-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg flex items-center gap-2 text-[10px] font-bold text-primary shadow-inner">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                <Code2 className="w-3 h-3" />
+                <span>AI is seeing your Playground code context</span>
+              </div>
+            )}
 
             {/* Input Form */}
             <div className="p-4 bg-background/50 backdrop-blur-sm border-t border-surfaceBorder/50 shrink-0 lg:rounded-b-3xl">
