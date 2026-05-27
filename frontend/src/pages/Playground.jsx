@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Code2, Play, Terminal, RefreshCw } from 'lucide-react';
+import React, { useState, useContext } from 'react';
+import { Code2, Play, Terminal, RefreshCw, Save, Download } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
+import { API_BASE_URL } from '../config';
 import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { oneDark } from '@codemirror/theme-one-dark';
@@ -79,6 +81,14 @@ const devEmpireTheme = EditorView.theme({
   },
 });
 
+const theme = oneDark;
+const extensions = [
+  devEmpireTheme,
+  javascript({ jsx: true }),
+  autocompletion(),
+  closeBrackets()
+];
+
 const DEFAULT_CODE = `// Dev Empire Interactive Playground
 // Write your JavaScript code here and hit Run!
 
@@ -107,15 +117,22 @@ coder.skills.forEach(skill => {
 `;
 
 export default function Playground() {
+  const { token } = useContext(AuthContext);
   const [code, setCode] = useState(DEFAULT_CODE);
   const [output, setOutput] = useState('Console ready. Write some code and hit Run!');
   const [isRunning, setIsRunning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Expose context for AI Assistant
   React.useEffect(() => {
     window.dispatchEvent(new CustomEvent('playgroundCodeUpdate', { detail: code }));
-    return () => window.dispatchEvent(new CustomEvent('playgroundCodeUpdate', { detail: null }));
   }, [code]);
+
+  // Cleanup only on unmount
+  React.useEffect(() => {
+    return () => window.dispatchEvent(new CustomEvent('playgroundCodeUpdate', { detail: null }));
+  }, []);
 
 
   const handleRunCode = () => {
@@ -162,6 +179,51 @@ export default function Playground() {
     setOutput('Console ready. Write some code and hit Run!');
   };
 
+  const handleSaveCode = async () => {
+    if (!token) return alert('Please log in to save your code.');
+    setIsSaving(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/playground/save`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ code })
+      });
+      if (res.ok) {
+        setOutput('✅ Code saved successfully to your cloud storage.');
+      } else {
+        setOutput('❌ Failed to save code.');
+      }
+    } catch (err) {
+      setOutput(`❌ Error: ${err.message}`);
+    }
+    setIsSaving(false);
+  };
+
+  const handleLoadCode = async () => {
+    if (!token) return alert('Please log in to load your code.');
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/playground/load`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCode(data.code);
+        setOutput('✅ Code loaded successfully from cloud storage.');
+      } else if (res.status === 404) {
+        setOutput('ℹ️ No saved code found for your account.');
+      } else {
+        setOutput('❌ Failed to load code.');
+      }
+    } catch (err) {
+      setOutput(`❌ Error: ${err.message}`);
+    }
+    setIsLoading(false);
+  };
+
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden bg-background">
       <div className="px-6 py-8 md:py-12 max-w-7xl mx-auto w-full flex-1 flex flex-col">
@@ -179,6 +241,28 @@ export default function Playground() {
           </div>
 
           <div className="flex items-center gap-3">
+            {token && (
+              <>
+                <button
+                  onClick={handleLoadCode}
+                  disabled={isLoading || isRunning}
+                  className="px-4 py-2 bg-surface border border-surfaceBorder hover:bg-surfaceHover hover:border-textDim text-textMuted hover:text-accent rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm"
+                  title="Load Saved Code"
+                >
+                  <Download className="w-4 h-4" /> Load
+                </button>
+                <button
+                  onClick={handleSaveCode}
+                  disabled={isSaving || isRunning}
+                  className="px-4 py-2 bg-surface border border-surfaceBorder hover:bg-surfaceHover hover:border-textDim text-textMuted hover:text-primary rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm"
+                  title="Save Code to Cloud"
+                >
+                  <Save className="w-4 h-4" /> Save
+                </button>
+                <div className="w-px h-6 bg-surfaceBorder hidden sm:block mx-1" />
+              </>
+            )}
+
             <button
               onClick={handleReset}
               className="px-4 py-2 bg-surface border border-surfaceBorder hover:bg-surfaceHover hover:border-textDim text-textMuted hover:text-textMain rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm"
@@ -210,19 +294,15 @@ export default function Playground() {
                 playground.js
               </span>
             </div>
-            <div className="flex-1 bg-[#0a0a0f] relative group">
+            <div className="flex-1 bg-[#0a0a0f] relative group flex flex-col min-h-[300px]">
               <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-500 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
               <CodeMirror
                 value={code}
                 height="100%"
-                theme={[oneDark, devEmpireTheme]}
-                extensions={[
-                  javascript({ jsx: true }),
-                  autocompletion(),
-                  closeBrackets()
-                ]}
+                theme={theme}
+                extensions={extensions}
                 onChange={(val) => setCode(val)}
-                className="h-full absolute inset-0 z-10"
+                className="flex-1 h-full z-10 overflow-hidden [&>.cm-editor]:h-full"
               />
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Terminal, Code2, Zap, BookOpen, Trophy, Sun, Moon, User, LogOut, ChevronDown, Award, Menu, X } from 'lucide-react';
+import { Terminal, Code2, Zap, BookOpen, Trophy, Sun, Moon, User, LogOut, ChevronDown, Award, Menu, X, Flame } from 'lucide-react';
 import Home from './pages/Home';
 import Challenges from './pages/Challenges';
 import GlobalAssistant from './components/GlobalAssistant';
@@ -8,6 +8,7 @@ import TopicDetail from './pages/TopicDetail';
 import ConceptDetail from './pages/ConceptDetail';
 import Leaderboard from './pages/Leaderboard';
 import Playground from './pages/Playground';
+import Profile from './pages/Profile';
 import { useEffect, useState, useContext } from 'react';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import AuthModal from './components/AuthModal';function AppContent() {
@@ -120,6 +121,14 @@ import AuthModal from './components/AuthModal';function AppContent() {
                         </div>
                       </div>
                       <span className="truncate max-w-[80px] font-bold">{user.username}</span>
+                      
+                      {user.streak_count > 0 && (
+                        <div className="flex items-center gap-0.5 text-warning font-black bg-warning/10 px-1.5 py-0.5 rounded-md ml-1">
+                          <Flame className="w-3 h-3" />
+                          <span className="text-[9px]">{user.streak_count}</span>
+                        </div>
+                      )}
+
                       <ChevronDown className={`w-3.5 h-3.5 text-textMuted transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
 
@@ -150,6 +159,14 @@ import AuthModal from './components/AuthModal';function AppContent() {
                             </div>
                           </div>
                           
+                          <Link
+                            to="/profile"
+                            onClick={() => setDropdownOpen(false)}
+                            className="w-full text-left px-4 py-2 text-xs text-textMain hover:bg-surface/50 flex items-center gap-2 font-bold transition-colors cursor-pointer"
+                          >
+                            <User className="w-4 h-4" />
+                            My Profile
+                          </Link>
                           <button
                             onClick={() => {
                               logout();
@@ -223,7 +240,15 @@ import AuthModal from './components/AuthModal';function AppContent() {
                     </div>
                     <div>
                       <div className="text-xs font-black text-textMain truncate leading-none">{user.username}</div>
-                      <div className="text-[10px] text-textMuted truncate mt-1">{user.email}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="text-[10px] text-textMuted truncate">{user.email}</div>
+                        {user.streak_count > 0 && (
+                          <div className="flex items-center gap-0.5 text-warning font-black bg-warning/10 px-1.5 py-0.5 rounded-md">
+                            <Flame className="w-3 h-3" />
+                            <span className="text-[9px]">{user.streak_count}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
@@ -244,6 +269,14 @@ import AuthModal from './components/AuthModal';function AppContent() {
                     </div>
                   </div>
 
+                  <Link
+                    to="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full py-3 bg-surface border border-surfaceBorder rounded-xl text-xs text-textMain font-bold flex items-center justify-center gap-2 transition-all hover:bg-surface/50 cursor-pointer mb-2"
+                  >
+                    <User className="w-4 h-4" />
+                    My Profile
+                  </Link>
                   <button
                     onClick={() => {
                       logout();
@@ -282,6 +315,7 @@ import AuthModal from './components/AuthModal';function AppContent() {
           <Route path="/challenges" element={<Challenges />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/playground" element={<Playground />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
       </main>
 

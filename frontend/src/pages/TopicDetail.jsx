@@ -62,6 +62,16 @@ export default function TopicDetail() {
   }, [id]);
 
   useEffect(() => {
+    const handleProgressSync = () => {
+      const saved = localStorage.getItem('codepath_completed');
+      const completedTopics = saved ? JSON.parse(saved) : [];
+      setIsCompleted(completedTopics.includes(id));
+    };
+    window.addEventListener('userProgressSynced', handleProgressSync);
+    return () => window.removeEventListener('userProgressSynced', handleProgressSync);
+  }, [id]);
+
+  useEffect(() => {
     if (chatOpen) {
       document.body.style.overflow = 'hidden';
       document.body.classList.add('drawer-open');

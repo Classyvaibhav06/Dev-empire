@@ -404,6 +404,52 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// Helper to calculate streak and XP
+const handleDailyStreak = async (user) => {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  
+  let streak_count = user.streak_count || 0;
+  let last_active = user.last_active_date;
+  let xp_gained = 0;
+
+  if (!last_active) {
+    streak_count = 1;
+    xp_gained = 5;
+  } else {
+    // Some DB drivers return Date objects, some return strings
+    const lastActiveStr = (last_active instanceof Date) 
+      ? last_active.toISOString().split('T')[0] 
+      : new Date(last_active).toISOString().split('T')[0];
+    
+    if (lastActiveStr === todayStr) {
+      return { streak_count, xp_gained: 0, new_level: user.level, new_xp: user.xp };
+    }
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    if (lastActiveStr === yesterdayStr) {
+      streak_count += 1;
+      xp_gained = 5;
+    } else {
+      streak_count = 1;
+      xp_gained = 5;
+    }
+  }
+
+  let newXp = (user.xp || 0) + xp_gained;
+  let newLevel = Math.floor(newXp / 100) + 1;
+
+  await db.query(
+    'UPDATE users SET streak_count = $1, last_active_date = CURRENT_DATE, xp = $2, level = $3 WHERE id = $4',
+    [streak_count, newXp, newLevel, user.id]
+  );
+
+  return { streak_count, xp_gained, new_xp: newXp, new_level: newLevel };
+};
+
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -422,6 +468,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid email or password' });
     }
 
+    const streakResult = await handleDailyStreak(user);
     const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
@@ -430,8 +477,9 @@ app.post('/api/auth/login', async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
-        level: user.level,
-        xp: user.xp
+        level: streakResult.new_level,
+        xp: streakResult.new_xp,
+        streak_count: streakResult.streak_count
       }
     });
   } catch (err) {
@@ -441,11 +489,21 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
-    const result = await db.query('SELECT id, username, email, level, xp FROM users WHERE id = $1', [req.user.id]);
+    const result = await db.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json(result.rows[0]);
+    const user = result.rows[0];
+    const streakResult = await handleDailyStreak(user);
+    
+    res.json({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      level: streakResult.new_level,
+      xp: streakResult.new_xp,
+      streak_count: streakResult.streak_count
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -453,10 +511,70 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 
 // ==================== USER PROFILE & PROGRESS SYNCING ====================
 
+app.post('/api/user/achievements/sync', authenticateToken, async (req, res) => {
+  try {
+    const { challengeCount } = req.body;
+    const userId = req.user.id;
+    const unlocked = [];
+
+    const userRes = await db.query('SELECT streak_count FROM users WHERE id = $1', [userId]);
+    const user = userRes.rows[0] || { streak_count: 0 };
+    
+    const topicsRes = await db.query('SELECT COUNT(*) as t_count FROM user_progress WHERE user_id = $1', [userId]);
+    const topicCount = parseInt(topicsRes.rows[0].t_count, 10);
+    
+    const quizzesRes = await db.query('SELECT COUNT(*) as q_count FROM concept_scores WHERE user_id = $1 AND score = 100', [userId]);
+    const perfectQuizCount = parseInt(quizzesRes.rows[0].q_count, 10);
+
+    const conditions = {
+      'first_login': true,
+      'streak_3': user.streak_count >= 3,
+      'streak_7': user.streak_count >= 7,
+      'first_challenge': (challengeCount || 0) >= 1,
+      'challenge_5': (challengeCount || 0) >= 5,
+      'quiz_perfect': perfectQuizCount >= 1,
+      'roadmap_path_1': topicCount >= 1
+    };
+
+    for (const [code, met] of Object.entries(conditions)) {
+      if (met) {
+        const achRes = await db.query('SELECT id, title, icon, rarity, description FROM achievements WHERE code = $1', [code]);
+        if (achRes.rows.length > 0) {
+          const ach = achRes.rows[0];
+          try {
+            await db.query('INSERT INTO user_achievements (user_id, achievement_id) VALUES ($1, $2)', [userId, ach.id]);
+            unlocked.push(ach);
+          } catch (e) {
+            // Already earned
+          }
+        }
+      }
+    }
+    
+    const result = await db.query(`
+      SELECT a.*, ua.earned_at 
+      FROM user_achievements ua
+      JOIN achievements a ON ua.achievement_id = a.id
+      WHERE ua.user_id = $1
+      ORDER BY ua.earned_at DESC;
+    `, [userId]);
+    
+    const allResult = await db.query('SELECT * FROM achievements ORDER BY id ASC');
+    
+    res.json({
+      earned: result.rows,
+      all: allResult.rows,
+      newlyUnlocked: unlocked
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/user/profile', authenticateToken, async (req, res) => {
   try {
     // Get User profile information
-    const userResult = await db.query('SELECT id, username, email, level, xp FROM users WHERE id = $1', [req.user.id]);
+    const userResult = await db.query('SELECT id, username, email, level, xp, streak_count FROM users WHERE id = $1', [req.user.id]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -557,10 +675,31 @@ app.post('/api/user/concept-score', authenticateToken, async (req, res) => {
 // Get XP Leaderboard
 app.get('/api/leaderboard', async (req, res) => {
   try {
-    const result = await db.query(
+    const { userId } = req.query;
+
+    const topUsersResult = await db.query(
       'SELECT id, username, level, xp FROM users ORDER BY xp DESC LIMIT 50'
     );
-    res.json(result.rows);
+    
+    let userRank = null;
+    if (userId) {
+      const rankQuery = `
+        WITH RankedUsers AS (
+          SELECT id, xp, level, RANK() OVER (ORDER BY xp DESC) as rank
+          FROM users
+        )
+        SELECT rank, xp, level FROM RankedUsers WHERE id = $1;
+      `;
+      const rankResult = await db.query(rankQuery, [userId]);
+      if (rankResult.rows.length > 0) {
+        userRank = rankResult.rows[0];
+      }
+    }
+
+    res.json({
+      topUsers: topUsersResult.rows,
+      userRank: userRank
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -780,6 +919,40 @@ Keep your response professional, engaging, formatted in clean markdown without t
     res.json({ enrichedContent });
   } catch (err) {
     console.error('Error in concept enrichment:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==================== PLAYGROUND PERSISTENCE ====================
+
+app.post('/api/playground/save', authenticateToken, async (req, res) => {
+  const { code } = req.body;
+  if (typeof code !== 'string') {
+    return res.status(400).json({ error: 'Code is required' });
+  }
+
+  try {
+    await db.query(`
+      INSERT INTO playground_saves (user_id, code, updated_at) 
+      VALUES ($1, $2, CURRENT_TIMESTAMP)
+      ON CONFLICT (user_id) 
+      DO UPDATE SET code = EXCLUDED.code, updated_at = CURRENT_TIMESTAMP
+    `, [req.user.id, code]);
+    
+    res.json({ message: 'Saved successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/playground/load', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query('SELECT code FROM playground_saves WHERE user_id = $1', [req.user.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No save found' });
+    }
+    res.json({ code: result.rows[0].code });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });

@@ -44,8 +44,13 @@ export default function Roadmap() {
   const [activeTopic, setActiveTopic] = useState(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('codepath_completed');
-    if (saved) setCompletedTopics(JSON.parse(saved));
+    const loadProgress = () => {
+      const saved = localStorage.getItem('codepath_completed');
+      if (saved) setCompletedTopics(JSON.parse(saved));
+    };
+    loadProgress();
+    window.addEventListener('userProgressSynced', loadProgress);
+    return () => window.removeEventListener('userProgressSynced', loadProgress);
   }, []);
 
   const handleSelectTopic = (topic) => {
@@ -209,7 +214,6 @@ export default function Roadmap() {
             className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm transition-opacity duration-300 opacity-100 animate-fade-in"
             onClick={() => {
               setActiveTopic(null);
-              setDrawerTab('resources');
             }}
           />
           <TopicDrawerContent 

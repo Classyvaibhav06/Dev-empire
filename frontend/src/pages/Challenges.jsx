@@ -125,6 +125,218 @@ const CHALLENGES_DATA = [
       { input: ['"A man, a plan, a canal. Panama"'], expected: 'true', check: (fn) => fn('A man, a plan, a canal. Panama') === true },
       { input: ['"hello"'], expected: 'false', check: (fn) => fn('hello') === false }
     ]
+  },
+  {
+    id: 'find-maximum',
+    title: 'Find Maximum in Array',
+    difficulty: 'Beginner',
+    xp: 100,
+    category: 'Arrays',
+    description: 'Write a function findMax(arr) that takes an array of numbers and returns the largest number in the array. If the array is empty, return null.',
+    starterCode: `function findMax(arr) {\n  // Write your code here\n  return null;\n}`,
+    testCases: [
+      { input: ['[1, 5, 3, 9, 2]'], expected: '9', check: (fn) => fn([1, 5, 3, 9, 2]) === 9 },
+      { input: ['[-10, -5, -20]'], expected: '-5', check: (fn) => fn([-10, -5, -20]) === -5 },
+      { input: ['[]'], expected: 'null', check: (fn) => fn([]) === null }
+    ]
+  },
+  {
+    id: 'count-vowels',
+    title: 'Count Vowels',
+    difficulty: 'Beginner',
+    xp: 100,
+    category: 'Strings',
+    description: 'Write a function countVowels(str) that returns the number of vowels (a, e, i, o, u) in a given string. The function should be case-insensitive.',
+    starterCode: `function countVowels(str) {\n  // Write your code here\n  return 0;\n}`,
+    testCases: [
+      { input: ['"hello"'], expected: '2', check: (fn) => fn('hello') === 2 },
+      { input: ['"OpenAI"'], expected: '4', check: (fn) => fn('OpenAI') === 4 },
+      { input: ['"rhythm"'], expected: '0', check: (fn) => fn('rhythm') === 0 }
+    ]
+  },
+  {
+    id: 'is-even',
+    title: 'Check if Even',
+    difficulty: 'Beginner',
+    xp: 100,
+    category: 'Math',
+    description: 'Write a function isEven(num) that returns true if a number is even, and false otherwise.',
+    starterCode: `function isEven(num) {\n  // Write your code here\n  return false;\n}`,
+    testCases: [
+      { input: [4], expected: 'true', check: (fn) => fn(4) === true },
+      { input: [7], expected: 'false', check: (fn) => fn(7) === false },
+      { input: [0], expected: 'true', check: (fn) => fn(0) === true }
+    ]
+  },
+  {
+    id: 'sum-array',
+    title: 'Sum of Array',
+    difficulty: 'Beginner',
+    xp: 100,
+    category: 'Arrays',
+    description: 'Write a function sumArray(arr) that calculates and returns the sum of all numbers in an array. If the array is empty, return 0.',
+    starterCode: `function sumArray(arr) {\n  // Write your code here\n  return 0;\n}`,
+    testCases: [
+      { input: ['[1, 2, 3, 4]'], expected: '10', check: (fn) => fn([1, 2, 3, 4]) === 10 },
+      { input: ['[-1, 1, -5, 5]'], expected: '0', check: (fn) => fn([-1, 1, -5, 5]) === 0 },
+      { input: ['[]'], expected: '0', check: (fn) => fn([]) === 0 }
+    ]
+  },
+  {
+    id: 'factorial',
+    title: 'Calculate Factorial',
+    difficulty: 'Beginner',
+    xp: 100,
+    category: 'Math',
+    description: 'Write a function factorial(n) that returns the factorial of a given non-negative integer n. The factorial of 0 is 1.',
+    starterCode: `function factorial(n) {\n  // Write your code here\n  return 1;\n}`,
+    testCases: [
+      { input: [5], expected: '120', check: (fn) => fn(5) === 120 },
+      { input: [0], expected: '1', check: (fn) => fn(0) === 1 },
+      { input: [3], expected: '6', check: (fn) => fn(3) === 6 }
+    ]
+  },
+  {
+    id: 'two-sum',
+    title: 'Two Sum',
+    difficulty: 'Intermediate',
+    xp: 250,
+    category: 'Algorithms',
+    description: 'Write a function twoSum(nums, target) that returns the indices of the two numbers in the array that add up to the target. Assume there is exactly one solution, and you may not use the same element twice. Return the indices as an array.',
+    starterCode: `function twoSum(nums, target) {\n  // Write your code here\n  return [];\n}`,
+    testCases: [
+      { input: ['[2, 7, 11, 15]', 9], expected: '[0, 1]', check: (fn) => { const res = fn([2, 7, 11, 15], 9); return Array.isArray(res) && res.includes(0) && res.includes(1) && res.length === 2; } },
+      { input: ['[3, 2, 4]', 6], expected: '[1, 2]', check: (fn) => { const res = fn([3, 2, 4], 6); return Array.isArray(res) && res.includes(1) && res.includes(2) && res.length === 2; } },
+      { input: ['[3, 3]', 6], expected: '[0, 1]', check: (fn) => { const res = fn([3, 3], 6); return Array.isArray(res) && res.includes(0) && res.includes(1) && res.length === 2; } }
+    ]
+  },
+  {
+    id: 'fibonacci',
+    title: 'Fibonacci Sequence',
+    difficulty: 'Intermediate',
+    xp: 250,
+    category: 'Recursion',
+    description: 'Write a function fibonacci(n) that returns the nth number in the Fibonacci sequence. Assume fibonacci(0) = 0 and fibonacci(1) = 1.',
+    starterCode: `function fibonacci(n) {\n  // Write your code here\n  return 0;\n}`,
+    testCases: [
+      { input: [5], expected: '5', check: (fn) => fn(5) === 5 },
+      { input: [10], expected: '55', check: (fn) => fn(10) === 55 },
+      { input: [0], expected: '0', check: (fn) => fn(0) === 0 }
+    ]
+  },
+  {
+    id: 'anagram-checker',
+    title: 'Anagram Checker',
+    difficulty: 'Intermediate',
+    xp: 250,
+    category: 'Strings',
+    description: 'Write a function isAnagram(str1, str2) that returns true if the two strings are anagrams of each other (contain the same characters in any order, ignoring spaces and casing), and false otherwise.',
+    starterCode: `function isAnagram(str1, str2) {\n  // Write your code here\n  return false;\n}`,
+    testCases: [
+      { input: ['"listen"', '"silent"'], expected: 'true', check: (fn) => fn('listen', 'silent') === true },
+      { input: ['"Debit card"', '"Bad credit"'], expected: 'true', check: (fn) => { const s1 = 'Debit card'; const s2 = 'Bad credit'; return fn(s1, s2) === true; } },
+      { input: ['"hello"', '"world"'], expected: 'false', check: (fn) => fn('hello', 'world') === false }
+    ]
+  },
+  {
+    id: 'remove-duplicates',
+    title: 'Remove Duplicates',
+    difficulty: 'Intermediate',
+    xp: 250,
+    category: 'Arrays',
+    description: 'Write a function removeDuplicates(arr) that takes an array and returns a new array with all duplicate elements removed, keeping the original order.',
+    starterCode: `function removeDuplicates(arr) {\n  // Write your code here\n  return [];\n}`,
+    testCases: [
+      { input: ['[1, 2, 2, 3, 4, 4, 5]'], expected: '[1, 2, 3, 4, 5]', check: (fn) => { const res = fn([1, 2, 2, 3, 4, 4, 5]); return JSON.stringify(res) === JSON.stringify([1, 2, 3, 4, 5]); } },
+      { input: ['["a", "b", "a", "c"]'], expected: '["a", "b", "c"]', check: (fn) => { const res = fn(["a", "b", "a", "c"]); return JSON.stringify(res) === JSON.stringify(["a", "b", "c"]); } },
+      { input: ['[]'], expected: '[]', check: (fn) => { const res = fn([]); return JSON.stringify(res) === JSON.stringify([]); } }
+    ]
+  },
+  {
+    id: 'title-case',
+    title: 'Title Case a Sentence',
+    difficulty: 'Intermediate',
+    xp: 250,
+    category: 'Strings',
+    description: 'Write a function titleCase(str) that returns the provided string with the first letter of each word capitalized. Make sure the rest of the word is in lower case.',
+    starterCode: `function titleCase(str) {\n  // Write your code here\n  return str;\n}`,
+    testCases: [
+      { input: ['"I am a little tea pot"'], expected: '"I Am A Little Tea Pot"', check: (fn) => fn("I am a little tea pot") === "I Am A Little Tea Pot" },
+      { input: ['"sHoRt AnD sToUt"'], expected: '"Short And Stout"', check: (fn) => fn("sHoRt AnD sToUt") === "Short And Stout" },
+      { input: ['"HERE IS MY HANDLE"'], expected: '"Here Is My Handle"', check: (fn) => fn("HERE IS MY HANDLE") === "Here Is My Handle" }
+    ]
+  },
+  {
+    id: 'valid-parentheses',
+    title: 'Valid Parentheses',
+    difficulty: 'Hard',
+    xp: 500,
+    category: 'Data Structures',
+    description: 'Write a function isValidParentheses(s) that takes a string containing just the characters "(", ")", "{", "}", "[" and "]", and determines if the input string is valid. Valid means open brackets must be closed by the same type of brackets, and open brackets must be closed in the correct order.',
+    starterCode: `function isValidParentheses(s) {\n  // Write your code here\n  return false;\n}`,
+    testCases: [
+      { input: ['"()"'], expected: 'true', check: (fn) => fn("()") === true },
+      { input: ['"()[]{}"'], expected: 'true', check: (fn) => fn("()[]{}") === true },
+      { input: ['"(]"'], expected: 'false', check: (fn) => fn("(]") === false },
+      { input: ['"([)]"'], expected: 'false', check: (fn) => fn("([)]") === false },
+      { input: ['"{[]}"'], expected: 'true', check: (fn) => fn("{[]}") === true }
+    ]
+  },
+  {
+    id: 'merge-sorted-arrays',
+    title: 'Merge Sorted Arrays',
+    difficulty: 'Hard',
+    xp: 500,
+    category: 'Algorithms',
+    description: 'Write a function mergeSortedArrays(arr1, arr2) that merges two sorted arrays into a single new sorted array.',
+    starterCode: `function mergeSortedArrays(arr1, arr2) {\n  // Write your code here\n  return [];\n}`,
+    testCases: [
+      { input: ['[1, 3, 5]', '[2, 4, 6]'], expected: '[1, 2, 3, 4, 5, 6]', check: (fn) => JSON.stringify(fn([1, 3, 5], [2, 4, 6])) === JSON.stringify([1, 2, 3, 4, 5, 6]) },
+      { input: ['[1, 2, 3]', '[4, 5, 6]'], expected: '[1, 2, 3, 4, 5, 6]', check: (fn) => JSON.stringify(fn([1, 2, 3], [4, 5, 6])) === JSON.stringify([1, 2, 3, 4, 5, 6]) },
+      { input: ['[]', '[1]'], expected: '[1]', check: (fn) => JSON.stringify(fn([], [1])) === JSON.stringify([1]) }
+    ]
+  },
+  {
+    id: 'longest-word',
+    title: 'Longest Word',
+    difficulty: 'Hard',
+    xp: 500,
+    category: 'Strings',
+    description: 'Write a function longestWord(str) that takes a sentence string and returns the longest word in it. If there are multiple words of the same maximum length, return the first one. Ignore punctuation.',
+    starterCode: `function longestWord(str) {\n  // Write your code here\n  return "";\n}`,
+    testCases: [
+      { input: ['"The quick brown fox jumped over the lazy dog"'], expected: '"jumped"', check: (fn) => fn("The quick brown fox jumped over the lazy dog") === "jumped" },
+      { input: ['"May the force be with you"'], expected: '"force"', check: (fn) => fn("May the force be with you") === "force" },
+      { input: ['"Hello, world!"'], expected: '"Hello"', check: (fn) => fn("Hello, world!") === "Hello" }
+    ]
+  },
+  {
+    id: 'chunk-array',
+    title: 'Chunk Array',
+    difficulty: 'Hard',
+    xp: 500,
+    category: 'Arrays',
+    description: 'Write a function chunkArray(arr, size) that splits an array into groups the length of size and returns them as a two-dimensional array.',
+    starterCode: `function chunkArray(arr, size) {\n  // Write your code here\n  return [];\n}`,
+    testCases: [
+      { input: ['["a", "b", "c", "d"]', 2], expected: '[["a", "b"], ["c", "d"]]', check: (fn) => JSON.stringify(fn(["a", "b", "c", "d"], 2)) === JSON.stringify([["a", "b"], ["c", "d"]]) },
+      { input: ['[0, 1, 2, 3, 4, 5]', 3], expected: '[[0, 1, 2], [3, 4, 5]]', check: (fn) => JSON.stringify(fn([0, 1, 2, 3, 4, 5], 3)) === JSON.stringify([[0, 1, 2], [3, 4, 5]]) },
+      { input: ['[0, 1, 2, 3, 4, 5]', 4], expected: '[[0, 1, 2, 3], [4, 5]]', check: (fn) => JSON.stringify(fn([0, 1, 2, 3, 4, 5], 4)) === JSON.stringify([[0, 1, 2, 3], [4, 5]]) }
+    ]
+  },
+  {
+    id: 'caesar-cipher',
+    title: 'Caesar Cipher',
+    difficulty: 'Hard',
+    xp: 500,
+    category: 'Cryptography',
+    description: 'Write a function caesarCipher(str, shift) that takes a string and a shift number, and returns the encrypted string where each letter is shifted by the specified amount. It should wrap around the alphabet (e.g., shifting "z" by 1 gives "a"). Assume lowercase letters for simplicity and preserve spaces.',
+    starterCode: `function caesarCipher(str, shift) {\n  // Write your code here\n  return str;\n}`,
+    testCases: [
+      { input: ['"abc"', 1], expected: '"bcd"', check: (fn) => fn("abc", 1) === "bcd" },
+      { input: ['"xyz"', 3], expected: '"abc"', check: (fn) => fn("xyz", 3) === "abc" },
+      { input: ['"hello world"', 5], expected: '"mjqqt btwqi"', check: (fn) => fn("hello world", 5) === "mjqqt btwqi" }
+    ]
   }
 ];
 
@@ -155,14 +367,19 @@ export default function Challenges() {
   }, [selectedChallenge]);
 
   useEffect(() => {
-    const savedCompleted = localStorage.getItem('completed_challenges');
-    const list = savedCompleted ? JSON.parse(savedCompleted) : [];
-    setCompletedList(list);
-    const earnedXp = CHALLENGES_DATA.reduce((acc, curr) => {
-      if (list.includes(curr.id)) return acc + curr.xp;
-      return acc;
-    }, 0);
-    setTotalXP(earnedXp);
+    const loadCompletedList = () => {
+      const savedCompleted = localStorage.getItem('completed_challenges');
+      const list = savedCompleted ? JSON.parse(savedCompleted) : [];
+      setCompletedList(list);
+      const earnedXp = CHALLENGES_DATA.reduce((acc, curr) => {
+        if (list.includes(curr.id)) return acc + curr.xp;
+        return acc;
+      }, 0);
+      setTotalXP(earnedXp);
+    };
+    loadCompletedList();
+    window.addEventListener('userProgressSynced', loadCompletedList);
+    return () => window.removeEventListener('userProgressSynced', loadCompletedList);
   }, []);
 
   const showXpToast = (msg) => {

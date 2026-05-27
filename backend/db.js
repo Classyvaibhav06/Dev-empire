@@ -28,6 +28,13 @@ async function initDb() {
       );
     `);
 
+    // Add Streak columns if they don't exist
+    await client.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS streak_count INT DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS last_active_date DATE;
+    `);
+
     // Create User Progress Table (Roadmap/Topic Completion)
     await client.query(`
       CREATE TABLE IF NOT EXISTS user_progress (
@@ -76,6 +83,53 @@ async function initDb() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    // Create Playground Saves Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS playground_saves (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        code TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT unique_user_playground UNIQUE (user_id)
+      );
+    `);
+
+    // Create Achievements Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS achievements (
+        id SERIAL PRIMARY KEY,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        title VARCHAR(100) NOT NULL,
+        description TEXT NOT NULL,
+        icon VARCHAR(50) NOT NULL,
+        rarity VARCHAR(20) DEFAULT 'Common'
+      );
+    `);
+
+    // Create User Achievements Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_achievements (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        achievement_id INT REFERENCES achievements(id) ON DELETE CASCADE,
+        earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, achievement_id)
+      );
+    `);
+
+    // Seed default achievements
+    await client.query(`
+      INSERT INTO achievements (code, title, description, icon, rarity) VALUES 
+        ('first_login', 'Hello World', 'Log in for the first time.', 'User', 'Common'),
+        ('streak_3', 'Rising Star', 'Maintain a 3-day login streak.', 'Flame', 'Rare'),
+        ('streak_7', 'Week Warrior', 'Maintain a 7-day login streak.', 'Flame', 'Epic'),
+        ('first_challenge', 'First Blood', 'Solve your first coding challenge.', 'Code2', 'Common'),
+        ('challenge_5', 'Problem Solver', 'Solve 5 coding challenges.', 'Code2', 'Rare'),
+        ('quiz_perfect', 'Flawless Victory', 'Score 100% on a concept quiz.', 'Star', 'Rare'),
+        ('roadmap_path_1', 'Pathfinder', 'Complete your first roadmap topic.', 'BookOpen', 'Common')
+      ON CONFLICT (code) DO NOTHING;
     `);
 
     console.log('PostgreSQL schema initialized successfully.');

@@ -35,6 +35,7 @@ export function AuthProvider({ children }) {
             localStorage.setItem('codepath_completed', JSON.stringify(profile.completedTopics));
             localStorage.setItem('concept_scores', JSON.stringify(profile.conceptScores));
             localStorage.setItem('completed_challenges', JSON.stringify(profile.completedChallenges));
+            window.dispatchEvent(new Event('userProgressSynced'));
           }
         } else {
           // Token expired or invalid
@@ -71,6 +72,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem('codepath_completed', JSON.stringify(profile.completedTopics));
       localStorage.setItem('concept_scores', JSON.stringify(profile.conceptScores));
       localStorage.setItem('completed_challenges', JSON.stringify(profile.completedChallenges));
+      window.dispatchEvent(new Event('userProgressSynced'));
     }
     return data.user;
   };

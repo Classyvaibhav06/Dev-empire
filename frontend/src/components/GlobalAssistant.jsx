@@ -17,7 +17,8 @@ import {
   BookOpen,
   ArrowRight,
   TrendingUp,
-  BrainCircuit
+  BrainCircuit,
+  Code2
 } from 'lucide-react';
 import { Card, Badge } from './ui/Shared';
 import { getTopicById, getConceptDetail } from '../utils/topicContent';
@@ -43,6 +44,8 @@ export default function GlobalAssistant() {
   const [aiReport, setAiReport] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const messagesEndRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
   const syncTimeoutRef = useRef(null);
   const isCreatingSessionRef = useRef(false);
   const lastSyncedChatRef = useRef('');
@@ -209,11 +212,18 @@ export default function GlobalAssistant() {
     }
   };
 
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  const handleScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      setIsAtBottom(scrollHeight - scrollTop - clientHeight < 50);
     }
-  }, [chatHistory]);
+  };
+
+  useEffect(() => {
+    if (isAtBottom && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+    }
+  }, [chatHistory, isAtBottom]);
 
   const handleAiModeChange = (mode) => {
     setAiMode(mode);
@@ -226,6 +236,57 @@ export default function GlobalAssistant() {
       localStorage.removeItem('previous_chat_history');
       setShowHistoryPrompt(false);
     }
+  };
+
+  const getSuggestedQuestions = () => {
+    if (path.startsWith('/topic/')) {
+      const parts = path.split('/');
+      const topicId = parts[2];
+      if (parts.length > 4 && parts[3] === 'concept') {
+        const conceptIndex = parts[4];
+        try {
+          const concept = getConceptDetail(topicId, conceptIndex);
+          return [
+            `Explain "${concept.title}" simply`,
+            `What are the most common mistakes with this?`,
+            `Give me a practice exercise for this`,
+            `How does this relate to other topics?`
+          ];
+        } catch (e) {}
+      } else {
+        try {
+          const topic = getTopicById(topicId);
+          return [
+            `What is ${topic.title} used for?`,
+            `What should I learn first in ${topic.title}?`,
+            `Give me a real-world example`,
+            `Quiz me on ${topic.title}`
+          ];
+        } catch (e) {}
+      }
+    } else if (path === '/roadmap') {
+      return [
+        `Which learning path is right for a beginner?`,
+        `What is the difference between Frontend and Backend?`,
+        `How long does it take to become a Fullstack developer?`,
+        `Suggest a study schedule for me`
+      ];
+    } else if (path === '/playground') {
+      return [
+        `Can you review my code for best practices?`,
+        `How do I optimize this code?`,
+        `Help me find a bug in my code`,
+        `Explain what my code does step-by-step`
+      ];
+    }
+    
+    // Default fallback
+    return [
+      `How do I start learning programming?`,
+      `What is the best language to learn first?`,
+      `How do I stay motivated to code?`,
+      `What are some good project ideas?`
+    ];
   };
 
   // Build real-time learning context prompt
@@ -272,13 +333,19 @@ ${scoreProfile}
 Guide the student step-by-step. Keep explanations clear, engaging, and context-aware. Provide helpful code examples if requested. When displaying code, use markdown syntax highlighting. Respond using markdown formatting.`;
   };
 
-  const handleSendChat = async (e) => {
-    e.preventDefault();
-    if (!inputMessage.trim() || isGenerating) return;
+  const handleSendChat = async (e, customMessage = null) => {
+    if (e) e.preventDefault();
+    const userMsgText = customMessage || inputMessage;
+    if (!userMsgText.trim() || isGenerating) return;
 
-    const userMsgText = inputMessage;
-    setInputMessage('');
+    if (showHistoryPrompt) {
+      localStorage.removeItem('previous_chat_history');
+      setShowHistoryPrompt(false);
+    }
+
+    if (!customMessage) setInputMessage('');
     setIsGenerating(true);
+    setIsAtBottom(true);
 
     const newUserMsg = { role: 'user', content: userMsgText };
     const updatedHistory = [...chatHistory, newUserMsg];
@@ -457,16 +524,10 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
       <div className={`fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-40 transition-transform duration-500 ease-in-out drawer-shift-element ${chatOpen ? 'opacity-0 pointer-events-none' : ''}`}>
         <button
           onClick={() => setChatOpen(!chatOpen)}
-          className="relative group flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] transition-all duration-300 hover:scale-110 cursor-pointer overflow-hidden border border-white/20"
+          className="relative group flex items-center justify-center w-14 h-14 rounded-full bg-primary text-white shadow-xl hover:bg-primary/90 transition-all duration-300 hover:scale-105 cursor-pointer border border-primary/20"
           aria-label="Ask AI Study Mentor"
         >
-          {/* Subtle pulse ring */}
-          <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-white"></span>
-          {chatOpen ? <X className="w-7 h-7 relative z-10 transition-transform duration-300 rotate-90" /> : <BrainCircuit className="w-7 h-7 relative z-10 transition-transform duration-300 hover:rotate-12" />}
-          
-          <span className="absolute right-20 scale-0 group-hover:scale-100 bg-surface/90 backdrop-blur-md text-textMain border border-surfaceBorder px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap shadow-xl transition-all duration-300 origin-right">
-            Ask Study Mentor
-          </span>
+          {chatOpen ? <X className="w-6 h-6 relative z-10 transition-transform duration-300 rotate-90" /> : <img src="https://cdn-icons-png.flaticon.com/512/8049/8049563.png" alt="Bot Icon" className="w-6 h-6 relative z-10 transition-transform duration-300 hover:rotate-12" />}
         </button>
       </div>
 
@@ -478,26 +539,23 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
 
       {/* ── DRAWER CONTAINER ── */}
       <div 
-        className={`fixed top-0 right-0 bottom-0 lg:top-6 lg:bottom-6 lg:right-6 z-[100] w-full max-w-xl bg-surface/95 backdrop-blur-2xl lg:rounded-3xl border-l lg:border border-surfaceBorder/50 shadow-[0_0_50px_rgba(0,0,0,0.2)] flex flex-col transition-all duration-500 ease-out ${chatOpen ? 'translate-x-0 opacity-100' : 'translate-x-[120%] lg:translate-x-[150%] opacity-0'}`}
+        className={`fixed top-0 right-0 bottom-0 lg:top-4 lg:bottom-4 lg:right-4 z-[100] w-full max-w-lg bg-surface lg:rounded-2xl border-l lg:border border-surfaceBorder shadow-2xl flex flex-col transition-all duration-500 ease-out ${chatOpen ? 'translate-x-0 opacity-100' : 'translate-x-[120%] lg:translate-x-[150%] opacity-0'}`}
       >
         {/* Header */}
-        <div className="p-6 border-b border-surfaceBorder/50 flex flex-col gap-4 bg-gradient-to-b from-surfaceLight/50 to-transparent shrink-0 lg:rounded-t-3xl">
+        <div className="p-4 border-b border-surfaceBorder flex flex-col gap-4 bg-surface shrink-0 lg:rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary blur-md opacity-40 rounded-full"></div>
-                <div className="relative bg-gradient-to-br from-primary to-accent p-2.5 rounded-2xl border border-white/20 text-white shadow-lg">
-                  <BrainCircuit className="w-5 h-5" />
-                </div>
+              <div className="w-10 h-10 rounded-full border border-surfaceBorder bg-surfaceLight flex items-center justify-center shrink-0">
+                <img src="https://cdn-icons-png.flaticon.com/512/8049/8049563.png" alt="Bot Icon" className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-black text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-textMain to-textMuted">AI Study Mentor</h3>
+                <h3 className="font-semibold text-base text-textMain tracking-tight">AI Study Mentor</h3>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surfaceLight text-textMuted border border-surfaceBorder">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
-                    <span className="text-[10px] text-primary font-bold uppercase tracking-wider">Online</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider">Online</span>
                   </div>
-                  <span className="text-[10px] text-textDim font-bold uppercase tracking-wider truncate max-w-[200px]">
+                  <span className="text-[10px] text-textDim font-medium uppercase tracking-wider truncate max-w-[200px]">
                     {path === '/' ? 'Home' : path.replace('/topic/', 'Topic: ')}
                   </span>
                 </div>
@@ -508,101 +566,102 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
                 <button 
                   onClick={handleClearChat}
                   title="Clear Chat History"
-                  className="p-2 rounded-xl hover:bg-danger/10 text-textMuted hover:text-danger transition-all cursor-pointer group"
+                  className="h-9 w-9 inline-flex items-center justify-center rounded-md hover:bg-surfaceHover text-textDim hover:text-textMain transition-colors cursor-pointer"
                 >
-                  <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               )}
               <button 
                 onClick={() => setChatOpen(false)}
-                className="p-2 rounded-xl hover:bg-surfaceBorder text-textMuted hover:text-textMain transition-all cursor-pointer group bg-surfaceLight"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-md hover:bg-surfaceHover text-textDim hover:text-textMain transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
           {/* Segmented Engine Toggle */}
-          <div className="flex p-1 bg-surface border border-surfaceBorder/60 rounded-xl relative">
+          <div className="flex p-1 bg-surfaceLight border border-surfaceBorder rounded-md relative">
             <button
               onClick={() => handleAiModeChange('fast')}
               type="button"
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg font-bold text-xs transition-all duration-300 cursor-pointer relative z-10 ${
+              className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-sm text-xs font-medium transition-all duration-200 cursor-pointer relative z-10 ${
                 aiMode === 'fast'
-                  ? 'text-white'
-                  : 'text-textDim hover:text-textMuted'
+                  ? 'text-textMain shadow-sm'
+                  : 'text-textDim hover:text-textMain'
               }`}
             >
-              <Zap className={`w-3.5 h-3.5 ${aiMode === 'fast' ? 'text-warning' : 'text-textDim'}`} /> Fast (Llama)
+              <Zap className="w-3.5 h-3.5" /> Fast
             </button>
             <button
               onClick={() => handleAiModeChange('reasoning')}
               type="button"
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg font-bold text-xs transition-all duration-300 cursor-pointer relative z-10 ${
+              className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-sm text-xs font-medium transition-all duration-200 cursor-pointer relative z-10 ${
                 aiMode === 'reasoning'
-                  ? 'text-white'
-                  : 'text-textDim hover:text-textMuted'
+                  ? 'text-textMain shadow-sm'
+                  : 'text-textDim hover:text-textMain'
               }`}
             >
-              <BrainCircuit className={`w-3.5 h-3.5 ${aiMode === 'reasoning' ? 'text-accent' : 'text-textDim'}`} /> Reasoning
+              <BrainCircuit className="w-3.5 h-3.5" /> Reasoning
             </button>
             
             {/* Sliding highlight pill */}
             <div 
-              className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-primary rounded-lg transition-transform duration-300 ease-out shadow-sm"
+              className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-surface rounded-sm transition-transform duration-300 ease-out shadow-sm border border-surfaceBorder"
               style={{ transform: aiMode === 'fast' ? 'translateX(0)' : 'translateX(100%)', left: '4px' }}
             ></div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex shrink-0 px-6 pt-2 border-b border-surfaceBorder/50">
+        <div className="flex shrink-0 px-4 pt-2 border-b border-surfaceBorder">
           <button
             onClick={() => setActiveTab('chat')}
-            className={`flex-1 pb-3 text-xs font-black uppercase tracking-widest transition-all relative group flex items-center justify-center gap-2 ${
-              activeTab === 'chat' ? 'text-primary' : 'text-textDim hover:text-textMuted'
+            className={`flex-1 pb-3 text-sm font-medium transition-all relative group flex items-center justify-center gap-2 ${
+              activeTab === 'chat' ? 'text-textMain' : 'text-textDim hover:text-textMain'
             }`}
           >
             <MessageSquare className="w-4 h-4" /> Chat
-            <div className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full transition-all duration-300 ${activeTab === 'chat' ? 'bg-primary' : 'bg-transparent group-hover:bg-surfaceBorder'}`} />
+            <div className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full transition-all duration-300 ${activeTab === 'chat' ? 'bg-primary' : 'bg-transparent'}`} />
           </button>
           <button
             onClick={() => setActiveTab('report')}
-            className={`flex-1 pb-3 text-xs font-black uppercase tracking-widest transition-all relative group flex items-center justify-center gap-2 ${
-              activeTab === 'report' ? 'text-primary' : 'text-textDim hover:text-textMuted'
+            className={`flex-1 pb-3 text-sm font-medium transition-all relative group flex items-center justify-center gap-2 ${
+              activeTab === 'report' ? 'text-textMain' : 'text-textDim hover:text-textMain'
             }`}
           >
             <TrendingUp className="w-4 h-4" /> Report
-            <div className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full transition-all duration-300 ${activeTab === 'report' ? 'bg-primary' : 'bg-transparent group-hover:bg-surfaceBorder'}`} />
+            <div className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full transition-all duration-300 ${activeTab === 'report' ? 'bg-primary' : 'bg-transparent'}`} />
           </button>
         </div>
 
         {/* ── TAB CONTENT: CHAT ── */}
         {activeTab === 'chat' && (
           <>
-            <div className="flex-1 overflow-y-auto p-6 bg-transparent custom-scrollbar">
+            <div 
+              className="flex-1 overflow-y-auto p-6 bg-transparent custom-scrollbar"
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+            >
               {showHistoryPrompt ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-6 select-none animate-fade-in">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-primary blur-xl opacity-20 rounded-full"></div>
-                    <div className="w-20 h-20 rounded-full bg-surface border border-surfaceBorder flex items-center justify-center text-primary relative shadow-lg">
-                      <MessageSquare className="w-8 h-8" />
-                    </div>
+                  <div className="w-16 h-16 rounded-full bg-surfaceLight border border-surfaceBorder flex items-center justify-center text-primary shadow-sm mb-2">
+                    <MessageSquare className="w-8 h-8" />
                   </div>
                   <div>
-                    <h4 className="font-black text-lg mb-2 text-textMain">Welcome Back!</h4>
-                    <p className="text-sm text-textMuted max-w-xs leading-relaxed">
+                    <h4 className="font-semibold text-xl tracking-tight mb-2 text-textMain">Welcome Back!</h4>
+                    <p className="text-sm text-textMuted max-w-sm leading-relaxed">
                       You have an active session with your mentor. Would you like to pick up where you left off?
                     </p>
                   </div>
-                  <div className="flex flex-col w-full max-w-xs gap-3 mt-4">
+                  <div className="flex flex-col w-full max-w-sm gap-2 mt-4">
                     <button
                       onClick={() => {
                         const savedChat = localStorage.getItem('previous_chat_history');
                         if (savedChat) setChatHistory(JSON.parse(savedChat));
                         setShowHistoryPrompt(false);
                       }}
-                      className="w-full py-3.5 bg-gradient-to-r from-primary to-accent text-white font-bold rounded-xl text-xs uppercase tracking-widest hover:shadow-lg hover:shadow-primary/30 transition-all cursor-pointer"
+                      className="w-full h-10 px-4 py-2 bg-primary text-white font-medium rounded-md text-sm hover:bg-primary/90 transition-colors cursor-pointer shadow-sm"
                     >
                       Continue Learning
                     </button>
@@ -611,21 +670,35 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
                         localStorage.removeItem('previous_chat_history');
                         setShowHistoryPrompt(false);
                       }}
-                      className="w-full py-3.5 bg-surface text-textMain border border-surfaceBorder font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-surfaceHover hover:border-surfaceBorderHover transition-all cursor-pointer"
+                      className="w-full h-10 px-4 py-2 bg-transparent text-textMain border border-surfaceBorder font-medium rounded-md text-sm hover:bg-surfaceLight transition-colors cursor-pointer shadow-sm"
                     >
                       Start New Topic
                     </button>
                   </div>
                 </div>
               ) : chatHistory.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6 select-none opacity-90 animate-fade-in">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 flex items-center justify-center text-primary mb-6 animate-bounce shadow-inner">
-                    <Sparkles className="w-7 h-7" />
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 select-none animate-fade-in">
+                  <div className="w-12 h-12 rounded-full bg-surfaceLight border border-surfaceBorder flex items-center justify-center text-primary mb-4 shadow-sm">
+                    <Sparkles className="w-6 h-6" />
                   </div>
-                  <h4 className="font-black text-xl mb-3 text-textMain">Mentor Ready</h4>
-                  <p className="text-sm text-textMuted max-w-sm leading-relaxed">
+                  <h4 className="font-semibold text-lg mb-2 text-textMain tracking-tight">Mentor Ready</h4>
+                  <p className="text-sm text-textMuted max-w-sm leading-relaxed mb-6">
                     Ask me to explain concepts, review code, or generate practice exercises. I see what you're working on!
                   </p>
+                  <div className="w-full max-w-md grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                    {getSuggestedQuestions().map((q, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSendChat(null, q)}
+                        className="text-left text-xs font-medium bg-transparent border border-surfaceBorder hover:bg-surfaceLight text-textMain p-3 rounded-md transition-all shadow-sm group cursor-pointer"
+                      >
+                        <span className="flex items-start gap-2">
+                          <MessageSquare className="w-3.5 h-3.5 text-textDim group-hover:text-textMain mt-0.5 shrink-0" />
+                          <span className="line-clamp-2">{q}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -637,7 +710,7 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
                       {msg.role === 'assistant' && (
                          <div className="flex items-center gap-2 mb-2 ml-1">
                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md border border-white/20">
-                             <BrainCircuit className="w-3.5 h-3.5 text-white" />
+                             <img src="https://cdn-icons-png.flaticon.com/512/8049/8049563.png" alt="Bot Icon" className="w-4 h-4 drop-shadow-sm" />
                            </div>
                            <span className="text-[10px] font-black uppercase tracking-wider text-textDim">Mentor</span>
                          </div>
@@ -649,10 +722,10 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
                       )}
                       
                       <div 
-                        className={`max-w-[88%] relative group animate-slide-up ${
+                        className={`max-w-[85%] relative group animate-slide-up ${
                           msg.role === 'user'
-                            ? 'bg-gradient-to-br from-primary to-primary-hover text-white rounded-t-2xl rounded-bl-2xl rounded-br-sm px-5 py-3.5 shadow-lg shadow-primary/20 border border-white/10'
-                            : 'bg-surface border border-surfaceBorder text-textMain rounded-t-2xl rounded-br-2xl rounded-bl-sm px-5 py-4 shadow-sm'
+                            ? 'bg-primary text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm'
+                            : 'bg-surfaceLight border border-surfaceBorder text-textMain rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm'
                         }`}
                       >
                         {msg.role === 'assistant' && <ThinkingBlock reasoning={msg.reasoning} />}
@@ -683,25 +756,25 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
             )}
 
             {/* Input Form */}
-            <div className="p-4 bg-background/50 backdrop-blur-sm border-t border-surfaceBorder/50 shrink-0 lg:rounded-b-3xl">
+            <div className="p-4 bg-surface border-t border-surfaceBorder shrink-0 lg:rounded-b-2xl">
               <form 
                 onSubmit={handleSendChat} 
-                className="flex gap-2 p-1 bg-surface border border-surfaceBorder rounded-full shadow-lg shadow-black/5 focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/10 transition-all duration-300"
+                className="flex gap-2 items-center"
               >
                 <input 
                   type="text"
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  disabled={isGenerating || showHistoryPrompt}
+                  disabled={isGenerating}
                   placeholder="Ask your mentor a question..."
-                  className="flex-1 px-5 py-3 bg-transparent text-sm text-textMain placeholder-textDim focus:outline-none w-full"
+                  className="flex-1 px-3 py-2 bg-transparent text-sm text-textMain placeholder:text-textDim border border-surfaceBorder rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-primary shadow-sm disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
                 />
                 <button 
                   type="submit"
-                  disabled={!inputMessage.trim() || isGenerating || showHistoryPrompt}
-                  className="w-12 h-12 bg-gradient-to-br from-primary to-accent text-white rounded-full hover:shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all duration-300 flex items-center justify-center shrink-0 disabled:opacity-40 disabled:hover:shadow-none group cursor-pointer"
+                  disabled={!inputMessage.trim() || isGenerating}
+                  className="h-9 w-9 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                 >
-                  <Send className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  <Send className="w-4 h-4" />
                 </button>
               </form>
             </div>
@@ -713,41 +786,34 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
           <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-transparent custom-scrollbar">
             {/* Dashboard Stats */}
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-surface border border-surfaceBorder p-5 rounded-2xl text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="text-3xl font-black text-textMain relative z-10">{totalAttempted}</div>
-                <div className="text-[10px] uppercase tracking-widest text-textDim font-bold mt-2 relative z-10">Taken</div>
+              <div className="bg-surface border border-surfaceBorder p-4 rounded-xl text-center shadow-sm flex flex-col items-center justify-center">
+                <div className="text-2xl font-bold text-textMain">{totalAttempted}</div>
+                <div className="text-xs text-textDim font-medium mt-1">Taken</div>
               </div>
-              <div className="bg-surface border border-surfaceBorder p-5 rounded-2xl text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="text-3xl font-black text-success relative z-10">{correctCount}</div>
-                <div className="text-[10px] uppercase tracking-widest text-textDim font-bold mt-2 relative z-10">Correct</div>
+              <div className="bg-surface border border-surfaceBorder p-4 rounded-xl text-center shadow-sm flex flex-col items-center justify-center">
+                <div className="text-2xl font-bold text-success">{correctCount}</div>
+                <div className="text-xs text-textDim font-medium mt-1">Correct</div>
               </div>
-              <div className="bg-surface border border-surfaceBorder p-5 rounded-2xl text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="text-3xl font-black text-textMain relative z-10">{passRate}%</div>
-                <div className="text-[10px] uppercase tracking-widest text-textDim font-bold mt-2 relative z-10">Accuracy</div>
+              <div className="bg-surface border border-surfaceBorder p-4 rounded-xl text-center shadow-sm flex flex-col items-center justify-center">
+                <div className="text-2xl font-bold text-textMain">{passRate}%</div>
+                <div className="text-xs text-textDim font-medium mt-1">Accuracy</div>
               </div>
             </div>
 
             {/* Progress Visualizer */}
-            <div className="bg-surface border border-surfaceBorder p-6 rounded-2xl shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+            <div className="bg-surface border border-surfaceBorder p-5 rounded-xl shadow-sm">
               <div className="flex justify-between items-center mb-4">
-                <h4 className="text-sm font-black uppercase tracking-wider text-textMain flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-warning/10 text-warning">
-                    <Trophy className="w-4 h-4" />
-                  </div>
+                <h4 className="text-sm font-semibold text-textMain flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-warning" />
                   Syllabus Progress
                 </h4>
-                <Badge variant="primary" className="!text-xs">{totalAttempted} / 55 Concepts</Badge>
+                <Badge variant="muted" className="text-xs">{totalAttempted} / 55</Badge>
               </div>
-              <div className="w-full bg-surfaceLight h-3 rounded-full overflow-hidden shadow-inner">
+              <div className="w-full bg-surfaceLight h-2 rounded-full overflow-hidden">
                 <div 
-                  className="bg-gradient-to-r from-primary to-accent h-full transition-all duration-1000 ease-out rounded-full relative"
+                  className="bg-primary h-full transition-all duration-500 ease-out rounded-full"
                   style={{ width: `${Math.min(100, Math.max(2, (totalAttempted / 55) * 100))}%` }}
                 >
-                  <div className="absolute inset-0 bg-white/20 w-full h-full animate-pulse"></div>
                 </div>
               </div>
             </div>
