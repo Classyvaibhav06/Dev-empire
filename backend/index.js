@@ -21,7 +21,7 @@ const allowedOrigins = [
 ];
 
 const openai = new OpenAI({
-  apiKey: process.env.NVIDIA_API_KEY || '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',
+  apiKey: process.env.NVIDIA_API_KEY,
   baseURL: 'https://integrate.api.nvidia.com/v1',
 });
 
