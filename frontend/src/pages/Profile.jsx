@@ -19,6 +19,17 @@ export default function Profile() {
   const [achievementsData, setAchievementsData] = useState({ earned: [], all: [] });
   const [newlyUnlocked, setNewlyUnlocked] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [heatmapData, setHeatmapData] = useState([]);
+  const [userBadges, setUserBadges] = useState([]);
+  
+  const [isEditingGithub, setIsEditingGithub] = useState(false);
+  const [githubUsername, setGithubUsername] = useState('');
+
+  const AVAILABLE_BADGES = [
+    { id: 'first_bug_squashed', title: 'First Bug Squashed', description: 'Complete your first concept quiz successfully.', icon: CheckCircle2, color: 'text-success' },
+    { id: 'night_owl', title: 'Night Owl', description: 'Execute code between 12 AM and 4 AM.', icon: Star, color: 'text-warning' },
+    { id: 'polyglot', title: 'Polyglot', description: 'Run code in 4 distinct languages.', icon: Code2, color: 'text-primary' },
+  ];
 
   useEffect(() => {
     const loadProgress = async () => {
@@ -35,7 +46,7 @@ export default function Profile() {
       const savedScores = localStorage.getItem('concept_scores');
       if (savedScores) setConceptScores(JSON.parse(savedScores));
       
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       if (token) {
         try {
           const res = await fetch(`${API_BASE_URL}/api/user/achievements/sync`, {
@@ -60,6 +71,13 @@ export default function Profile() {
           if (projRes.ok) {
             setProjects(await projRes.json());
           }
+
+          // Fetch Gamification Data
+          const heatmapRes = await fetch(`${API_BASE_URL}/api/user/heatmap`, { headers: { 'Authorization': `Bearer ${token}` } });
+          if (heatmapRes.ok) setHeatmapData(await heatmapRes.json());
+          
+          const badgesRes = await fetch(`${API_BASE_URL}/api/user/badges`, { headers: { 'Authorization': `Bearer ${token}` } });
+          if (badgesRes.ok) setUserBadges(await badgesRes.json());
         } catch (err) {
           console.error("Failed to sync profile data", err);
         }
@@ -70,6 +88,12 @@ export default function Profile() {
     window.addEventListener('userProgressSynced', loadProgress);
     return () => window.removeEventListener('userProgressSynced', loadProgress);
   }, []);
+
+  useEffect(() => {
+    if (user && user.github_username) {
+      setGithubUsername(user.github_username);
+    }
+  }, [user]);
 
   if (loading) {
     return (
@@ -91,6 +115,39 @@ export default function Profile() {
   const currentLevel = user.level || 1;
   const progressToNextLevel = currentXp % 100;
   const totalQuizzesPassed = Object.values(conceptScores).filter(s => s.score > 0).length;
+
+  const getActivityLevel = (count) => {
+    if (count === 0) return 'bg-surfaceBorder/30';
+    if (count <= 2) return 'bg-primary/40';
+    if (count <= 5) return 'bg-primary/70';
+    return 'bg-primary';
+  };
+
+  const handleSaveGithub = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API_BASE_URL}/api/user/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ github_username: githubUsername })
+      });
+      if (res.ok) {
+        setIsEditingGithub(false);
+        user.github_username = githubUsername;
+      }
+    } catch (err) {
+      console.error('Failed to update github username', err);
+    }
+  };
+
+  const today = new Date();
+  const daysGrid = Array.from({ length: 364 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (363 - i));
+    const dateStr = d.toISOString().split('T')[0];
+    const activity = heatmapData.find(h => h.date && h.date.startsWith(dateStr));
+    return { date: dateStr, count: activity ? parseInt(activity.count, 10) : 0 };
+  });
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 w-full animate-fade-in relative z-10">
@@ -115,6 +172,28 @@ export default function Profile() {
         <div className="flex-1 text-center md:text-left mt-2">
           <h1 className="text-3xl font-bold tracking-tight text-textMain mb-1">{user.username}</h1>
           <p className="text-textMuted text-sm font-medium">{user.email}</p>
+          
+          <div className="mt-2">
+            {isEditingGithub ? (
+              <div className="flex items-center justify-center md:justify-start gap-2">
+                <input 
+                  type="text" 
+                  value={githubUsername}
+                  onChange={(e) => setGithubUsername(e.target.value)}
+                  placeholder="GitHub Username"
+                  className="bg-surface/50 border border-surfaceBorder rounded px-2 py-1 text-sm text-textMain outline-none focus:border-primary w-40"
+                />
+                <button onClick={handleSaveGithub} className="text-xs bg-primary text-white px-2 py-1.5 rounded hover:opacity-90 font-medium transition-opacity">Save</button>
+                <button onClick={() => setIsEditingGithub(false)} className="text-xs text-textMuted hover:text-textMain transition-colors">Cancel</button>
+              </div>
+            ) : (
+              <p className="text-textMuted text-sm font-medium flex items-center justify-center md:justify-start gap-2">
+                <svg className="w-4 h-4 fill-current opacity-80" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                {user.github_username || 'Link GitHub'}
+                <button onClick={() => setIsEditingGithub(true)} className="text-primary hover:underline text-xs ml-1">Edit</button>
+              </p>
+            )}
+          </div>
           
           <div className="flex items-center justify-center md:justify-start gap-3 mt-4">
             <Badge variant="outline" className="text-xs bg-surface/50">Developer</Badge>
@@ -196,6 +275,65 @@ export default function Profile() {
         {/* Right Column: Activity History */}
         <div className="lg:col-span-8 space-y-6">
           
+          {/* Heatmap Activity */}
+          <div className="rounded-xl border border-surfaceBorder bg-surface/40 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-surfaceBorder/50 flex items-center justify-between bg-surface/20">
+              <h3 className="text-sm font-semibold text-textMain flex items-center gap-2">
+                <Activity className="w-4 h-4 text-textMuted" /> Activity Heatmap
+              </h3>
+            </div>
+            <div className="p-6 overflow-x-auto">
+              <div className="flex gap-1" style={{ width: 'max-content' }}>
+                {Array.from({ length: 52 }).map((_, weekIdx) => (
+                  <div key={weekIdx} className="flex flex-col gap-1">
+                    {daysGrid.slice(weekIdx * 7, weekIdx * 7 + 7).map((day, dayIdx) => (
+                      <div 
+                        key={dayIdx} 
+                        className={`w-3 h-3 rounded-sm ${getActivityLevel(day.count)} hover:ring-1 ring-primary transition-all cursor-help`}
+                        title={`${day.count} contributions on ${day.date}`}
+                      ></div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-end gap-2 mt-4 text-xs text-textMuted">
+                <span>Less</span>
+                <div className="w-3 h-3 rounded-sm bg-surfaceBorder/30"></div>
+                <div className="w-3 h-3 rounded-sm bg-primary/40"></div>
+                <div className="w-3 h-3 rounded-sm bg-primary/70"></div>
+                <div className="w-3 h-3 rounded-sm bg-primary"></div>
+                <span>More</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Achievement Badges */}
+          <div className="rounded-xl border border-surfaceBorder bg-surface/40 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-surfaceBorder/50 flex items-center justify-between bg-surface/20">
+              <h3 className="text-sm font-semibold text-textMain flex items-center gap-2">
+                <Award className="w-4 h-4 text-warning" /> Achievements
+              </h3>
+            </div>
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {AVAILABLE_BADGES.map(badge => {
+                const earned = userBadges.find(b => b.badge_id === badge.id);
+                const Icon = badge.icon;
+                return (
+                  <div key={badge.id} className={`p-4 rounded-xl border flex flex-col items-center text-center gap-3 transition-all ${earned ? 'bg-surface/60 border-primary/30 shadow-[0_0_15px_rgba(var(--color-primary),0.1)]' : 'bg-surface/20 border-surfaceBorder opacity-60 grayscale'}`}>
+                    <div className={`p-3 rounded-full ${earned ? 'bg-primary/20' : 'bg-surfaceBorder/30'}`}>
+                      <Icon className={`w-8 h-8 ${earned ? badge.color : 'text-textMuted'}`} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-textMain text-sm mb-1">{badge.title}</h4>
+                      <p className="text-[11px] text-textMuted leading-tight">{badge.description}</p>
+                    </div>
+                    {earned && <div className="text-[10px] font-medium text-textDim mt-2 border border-surfaceBorder/50 px-2 py-0.5 rounded-full bg-background/50">Earned: {new Date(earned.earned_at).toLocaleDateString()}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Completed Topics */}
           <div className="rounded-xl border border-surfaceBorder bg-surface/40 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-surfaceBorder/50 flex items-center justify-between bg-surface/20">

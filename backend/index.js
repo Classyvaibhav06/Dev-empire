@@ -374,6 +374,18 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+const optionalAuthenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return next();
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (!err) req.user = user;
+    next();
+  });
+};
+
 // ==================== AUTHENTICATION ROUTES ====================
 
 app.post('/api/auth/register', async (req, res) => {
@@ -398,16 +410,27 @@ app.post('/api/auth/register', async (req, res) => {
     const user = result.rows[0];
     const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
+    logActivity(user.id, 'register');
+
     res.status(201).json({ token, user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// Helper to get local date string YYYY-MM-DD
+const getLocalDateString = (dateInput = new Date()) => {
+  const d = new Date(dateInput);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Helper to calculate streak and XP
 const handleDailyStreak = async (user) => {
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = getLocalDateString(now);
 
   let streak_count = user.streak_count || 0;
   let last_active = user.last_active_date;
@@ -417,10 +440,7 @@ const handleDailyStreak = async (user) => {
     streak_count = 1;
     xp_gained = 5;
   } else {
-    // Some DB drivers return Date objects, some return strings
-    const lastActiveStr = (last_active instanceof Date)
-      ? last_active.toISOString().split('T')[0]
-      : new Date(last_active).toISOString().split('T')[0];
+    const lastActiveStr = getLocalDateString(last_active);
 
     if (lastActiveStr === todayStr) {
       return { streak_count, xp_gained: 0, new_level: user.level, new_xp: user.xp };
@@ -428,7 +448,7 @@ const handleDailyStreak = async (user) => {
 
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStr = getLocalDateString(yesterday);
 
     if (lastActiveStr === yesterdayStr) {
       streak_count += 1;
@@ -443,11 +463,30 @@ const handleDailyStreak = async (user) => {
   let newLevel = Math.floor(newXp / 100) + 1;
 
   await db.query(
-    'UPDATE users SET streak_count = $1, last_active_date = CURRENT_DATE, xp = $2, level = $3 WHERE id = $4',
-    [streak_count, newXp, newLevel, user.id]
+    'UPDATE users SET streak_count = $1, last_active_date = $2, xp = $3, level = $4 WHERE id = $5',
+    [streak_count, todayStr, newXp, newLevel, user.id]
   );
 
   return { streak_count, xp_gained, new_xp: newXp, new_level: newLevel };
+};
+
+// Log user activity and update daily streak
+const recordUserActivity = async (userId, actionType) => {
+  try {
+    // 1. Log to user_activities for heatmap
+    await logActivity(userId, actionType);
+
+    // 2. Fetch full user to calculate daily streak
+    const userRes = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (userRes.rows.length > 0) {
+      const user = userRes.rows[0];
+      const streakResult = await handleDailyStreak(user);
+      return streakResult;
+    }
+  } catch (err) {
+    console.error('Failed to record user activity:', err.message);
+  }
+  return null;
 };
 
 app.post('/api/auth/login', async (req, res) => {
@@ -470,6 +509,9 @@ app.post('/api/auth/login', async (req, res) => {
 
     const streakResult = await handleDailyStreak(user);
     const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+
+    // Gamification Tracking
+    logActivity(user.id, 'login');
 
     res.json({
       token,
@@ -502,7 +544,8 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
       email: user.email,
       level: streakResult.new_level,
       xp: streakResult.new_xp,
-      streak_count: streakResult.streak_count
+      streak_count: streakResult.streak_count,
+      github_username: user.github_username
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -571,10 +614,56 @@ app.post('/api/user/achievements/sync', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== ACTIVITY & BADGES (HEATMAP) ====================
+async function logActivity(userId, actionType) {
+  try {
+    await db.query('INSERT INTO user_activities (user_id, action_type) VALUES ($1, $2)', [userId, actionType]);
+  } catch (err) {
+    console.error('Failed to log activity:', err.message);
+  }
+}
+
+async function awardBadge(userId, badgeId) {
+  try {
+    await db.query('INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, badgeId]);
+  } catch (err) {
+    console.error('Failed to award badge:', err.message);
+  }
+}
+
+app.get('/api/user/heatmap', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT DATE(created_at) as date, COUNT(*) as count 
+      FROM user_activities 
+      WHERE user_id = $1 
+      GROUP BY DATE(created_at) 
+      ORDER BY date ASC
+    `, [req.user.id]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/user/badges', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT badge_id, earned_at 
+      FROM user_badges 
+      WHERE user_id = $1 
+      ORDER BY earned_at DESC
+    `, [req.user.id]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/user/profile', authenticateToken, async (req, res) => {
   try {
     // Get User profile information
-    const userResult = await db.query('SELECT id, username, email, level, xp, streak_count FROM users WHERE id = $1', [req.user.id]);
+    const userResult = await db.query('SELECT id, username, email, level, xp, streak_count, github_username FROM users WHERE id = $1', [req.user.id]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -613,12 +702,25 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
   }
 });
 
+app.put('/api/user/profile', authenticateToken, async (req, res) => {
+  const { github_username } = req.body;
+  try {
+    await db.query('UPDATE users SET github_username = $1 WHERE id = $2', [github_username || null, req.user.id]);
+    res.json({ message: 'Profile updated' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Toggle Roadmap topic completion
 app.post('/api/user/progress', authenticateToken, async (req, res) => {
   const { topicId, completed } = req.body;
   if (!topicId) return res.status(400).json({ error: 'Missing topicId' });
 
   try {
+    const streakResult = await recordUserActivity(req.user.id, 'roadmap_progress');
+    const currentStreak = streakResult ? streakResult.streak_count : null;
+
     if (completed) {
       await db.query(
         'INSERT INTO user_progress (user_id, topic_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
@@ -630,7 +732,7 @@ app.post('/api/user/progress', authenticateToken, async (req, res) => {
         [req.user.id, topicId]
       );
     }
-    res.json({ success: true });
+    res.json({ success: true, streak_count: currentStreak });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -642,7 +744,10 @@ app.post('/api/user/concept-score', authenticateToken, async (req, res) => {
   if (!conceptKey || score === undefined) return res.status(400).json({ error: 'Missing conceptKey or score' });
 
   try {
-    // 1. Insert the quiz attempt. DO NOTHING if they already answered this question.
+    // 1. Record activity and update daily streak
+    await recordUserActivity(req.user.id, 'quiz_complete');
+
+    // 2. Insert the quiz attempt. DO NOTHING if they already answered this question.
     const insertResult = await db.query(`
       INSERT INTO concept_scores (user_id, concept_key, score, selected_option, concept_title, topic_id, topic_title)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -652,11 +757,12 @@ app.post('/api/user/concept-score', authenticateToken, async (req, res) => {
 
     const wasInserted = insertResult.rows.length > 0;
 
-    // 2. Award 10 XP if they passed AND this was their first attempt (wasInserted)
+    // 3. Award 10 XP if they passed AND this was their first attempt (wasInserted)
     let xpAdded = 0;
-    const userXpQuery = await db.query('SELECT xp, level FROM users WHERE id = $1', [req.user.id]);
+    const userXpQuery = await db.query('SELECT xp, level, streak_count FROM users WHERE id = $1', [req.user.id]);
     let newXp = userXpQuery.rows[0]?.xp || 0;
     let newLevel = userXpQuery.rows[0]?.level || 1;
+    let currentStreak = userXpQuery.rows[0]?.streak_count || 0;
 
     if (score === 1 && wasInserted) {
       xpAdded = 10;
@@ -664,9 +770,19 @@ app.post('/api/user/concept-score', authenticateToken, async (req, res) => {
       newLevel = Math.floor(newXp / 100) + 1;
 
       await db.query('UPDATE users SET xp = $1, level = $2 WHERE id = $3', [newXp, newLevel, req.user.id]);
+      
+      // Award Badge for First Bug Squashed (first passed quiz)
+      awardBadge(req.user.id, 'first_bug_squashed');
     }
 
-    res.json({ success: true, xpAdded, newXp, newLevel, locked: !wasInserted });
+    res.json({ 
+      success: true, 
+      xpAdded, 
+      newXp, 
+      newLevel, 
+      streak_count: currentStreak,
+      locked: !wasInserted 
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -711,32 +827,45 @@ app.post('/api/user/challenge', authenticateToken, async (req, res) => {
   if (!challengeId) return res.status(400).json({ error: 'Missing challengeId' });
 
   try {
-    // 1. Check if already solved
+    // 1. Record activity and update daily streak
+    await recordUserActivity(req.user.id, 'challenge_solved');
+
+    // 2. Check if already solved
     const checkSolved = await db.query(
       'SELECT id FROM completed_challenges WHERE user_id = $1 AND challenge_id = $2',
       [req.user.id, challengeId]
     );
 
+    // Get current updated stats from users table (which includes daily streak updates)
+    const userXpQuery = await db.query('SELECT xp, level, streak_count FROM users WHERE id = $1', [req.user.id]);
+    let currentXp = userXpQuery.rows[0]?.xp || 0;
+    let currentLevel = userXpQuery.rows[0]?.level || 1;
+    const currentStreak = userXpQuery.rows[0]?.streak_count || 0;
+
     if (checkSolved.rows.length > 0) {
-      return res.json({ success: true, xpAdded: 0 }); // Already solved previously
+      return res.json({ 
+        success: true, 
+        xpAdded: 0, 
+        newXp: currentXp, 
+        newLevel: currentLevel, 
+        streak_count: currentStreak 
+      }); // Already solved previously
     }
 
-    // 2. Insert completion
+    // 3. Insert completion
     await db.query(
       'INSERT INTO completed_challenges (user_id, challenge_id) VALUES ($1, $2)',
       [req.user.id, challengeId]
     );
 
-    // 3. Award 50 XP
-    const userXpQuery = await db.query('SELECT xp FROM users WHERE id = $1', [req.user.id]);
-    const currentXp = userXpQuery.rows[0]?.xp || 0;
+    // 4. Award 50 XP
     const xpAdded = 50;
     const newXp = currentXp + xpAdded;
     const newLevel = Math.floor(newXp / 100) + 1;
 
     await db.query('UPDATE users SET xp = $1, level = $2 WHERE id = $3', [newXp, newLevel, req.user.id]);
 
-    res.json({ success: true, xpAdded, newXp, newLevel });
+    res.json({ success: true, xpAdded, newXp, newLevel, streak_count: currentStreak });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -763,6 +892,8 @@ app.post('/api/chat-sessions', authenticateToken, async (req, res) => {
   const sessionTitle = title || 'New Conversation';
   const sessionMessages = messages || [];
   try {
+    await recordUserActivity(req.user.id, 'assistant_chat');
+
     const result = await db.query(
       'INSERT INTO chat_sessions (user_id, title, messages) VALUES ($1, $2, $3) RETURNING *',
       [req.user.id, sessionTitle, JSON.stringify(sessionMessages)]
@@ -791,6 +922,8 @@ app.get('/api/chat-sessions/:id', authenticateToken, async (req, res) => {
 app.put('/api/chat-sessions/:id', authenticateToken, async (req, res) => {
   const { title, messages } = req.body;
   try {
+    await recordUserActivity(req.user.id, 'assistant_chat');
+
     const result = await db.query(
       `UPDATE chat_sessions 
        SET messages = $1, title = COALESCE($2, title), updated_at = CURRENT_TIMESTAMP
@@ -834,7 +967,7 @@ app.get('/api/roadmap', async (req, res) => {
   }
 });
 
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', optionalAuthenticateToken, async (req, res) => {
   const { messages, mode } = req.body;
 
   if (!messages || !Array.isArray(messages)) {
@@ -842,6 +975,11 @@ app.post('/api/chat', async (req, res) => {
   }
 
   try {
+    let streakResult = null;
+    if (req.user) {
+      streakResult = await recordUserActivity(req.user.id, 'assistant_chat');
+    }
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -872,6 +1010,16 @@ app.post('/api/chat', async (req, res) => {
       if (content || reasoning) {
         res.write(`data: ${JSON.stringify({ content, reasoning })}\n\n`);
       }
+    }
+
+    if (streakResult) {
+      res.write(`data: ${JSON.stringify({
+        userStats: {
+          streak_count: streakResult.streak_count,
+          newXp: streakResult.new_xp,
+          newLevel: streakResult.new_level
+        }
+      })}\n\n`);
     }
 
     res.write('data: [DONE]\n\n');
@@ -960,29 +1108,72 @@ app.get('/api/playground/load', authenticateToken, async (req, res) => {
 const { executeCodeLocally } = require('./executor');
 
 // ==================== PLAYGROUND EXECUTION (LOCAL) ====================
-app.post('/api/playground/execute', async (req, res) => {
+app.post('/api/playground/execute', optionalAuthenticateToken, async (req, res) => {
   const { code, language } = req.body;
   if (!code || !language) return res.status(400).json({ error: 'Code and language are required' });
 
   try {
     const data = await executeCodeLocally(language, code);
+    
+    // Gamification Tracking
+    if (req.user) {
+      const streakResult = await recordUserActivity(req.user.id, `code_execution_${language}`);
+      if (streakResult) {
+        data.streak_count = streakResult.streak_count;
+        data.newXp = streakResult.new_xp;
+        data.newLevel = streakResult.new_level;
+      }
+      
+      // Night Owl Badge (12 AM to 4 AM)
+      const hour = new Date().getHours();
+      if (hour >= 0 && hour < 4) {
+        awardBadge(req.user.id, 'night_owl');
+      }
+
+      // Polyglot Badge (check if they have 4 distinct languages)
+      const languages = await db.query(
+        "SELECT COUNT(DISTINCT action_type) as lang_count FROM user_activities WHERE user_id = $1 AND action_type LIKE 'code_execution_%'", 
+        [req.user.id]
+      );
+      if (parseInt(languages.rows[0].lang_count, 10) >= 4) {
+        awardBadge(req.user.id, 'polyglot');
+      }
+    }
+
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ==================== PLAYGROUND SHARE SNIPPETS ====================
-app.post('/api/playground/share', async (req, res) => {
-  const { code, language } = req.body;
-  if (!code) return res.status(400).json({ error: 'Code is required' });
+// ==================== PLAYGROUND SHARE & EXPLORE ====================
+app.post('/api/playground/share', optionalAuthenticateToken, async (req, res) => {
+  const { code, html_code, css_code, language, title, description, is_public } = req.body;
+  if (!code && !html_code) return res.status(400).json({ error: 'Code is required' });
 
   try {
+    const userId = req.user ? req.user.id : null;
+    let streakResult = null;
+    if (userId) {
+      streakResult = await recordUserActivity(userId, 'snippet_shared');
+    }
+
     const result = await db.query(
-      'INSERT INTO shared_snippets (code, language) VALUES ($1, $2) RETURNING id',
-      [code, language || 'javascript']
+      `INSERT INTO shared_snippets 
+       (user_id, title, description, is_public, code, html_code, css_code, language) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+       RETURNING id`,
+      [userId, title || 'Untitled Snippet', description || '', is_public || false, code || '', html_code || '', css_code || '', language || 'javascript']
     );
-    res.json({ id: result.rows[0].id });
+
+    const responsePayload = { id: result.rows[0].id };
+    if (streakResult) {
+      responsePayload.streak_count = streakResult.streak_count;
+      responsePayload.newXp = streakResult.new_xp;
+      responsePayload.newLevel = streakResult.new_level;
+    }
+
+    res.json(responsePayload);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -990,9 +1181,48 @@ app.post('/api/playground/share', async (req, res) => {
 
 app.get('/api/playground/snippet/:id', async (req, res) => {
   try {
-    const result = await db.query('SELECT code, language FROM shared_snippets WHERE id = $1', [req.params.id]);
+    const result = await db.query(`
+      SELECT s.*, u.username as author 
+      FROM shared_snippets s 
+      LEFT JOIN users u ON s.user_id = u.id 
+      WHERE s.id = $1
+    `, [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Snippet not found' });
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/explore/snippets', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT s.id, s.title, s.description, s.language, s.upvotes, s.created_at, u.username as author
+      FROM shared_snippets s
+      LEFT JOIN users u ON s.user_id = u.id
+      WHERE s.is_public = TRUE
+      ORDER BY s.upvotes DESC, s.created_at DESC
+      LIMIT 50
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/explore/snippets/:id/upvote', authenticateToken, async (req, res) => {
+  const snippetId = req.params.id;
+  const userId = req.user.id;
+  try {
+    const check = await db.query('SELECT * FROM snippet_upvotes WHERE user_id = $1 AND snippet_id = $2', [userId, snippetId]);
+    if (check.rows.length > 0) {
+      return res.status(400).json({ error: 'Already upvoted' });
+    }
+    
+    await db.query('INSERT INTO snippet_upvotes (user_id, snippet_id) VALUES ($1, $2)', [userId, snippetId]);
+    await db.query('UPDATE shared_snippets SET upvotes = upvotes + 1 WHERE id = $1', [snippetId]);
+    
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

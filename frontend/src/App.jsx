@@ -9,6 +9,7 @@ import ConceptDetail from './pages/ConceptDetail';
 import Leaderboard from './pages/Leaderboard';
 import Playground from './pages/Playground';
 import Profile from './pages/Profile';
+import Explore from './pages/Explore';
 import { useEffect, useState, useContext } from 'react';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import AuthModal from './components/AuthModal';function AppContent() {
@@ -45,7 +46,8 @@ import AuthModal from './components/AuthModal';function AppContent() {
     { name: 'Roadmaps', path: '/roadmap', icon: BookOpen },
     { name: 'Challenges', path: '/challenges', icon: Trophy },
     { name: 'Leaderboard', path: '/leaderboard', icon: Award },
-    { name: 'Playground', path: '/playground', icon: Code2 }
+    { name: 'Playground', path: '/playground', icon: Code2 },
+    { name: 'Explore', path: '/explore', icon: Flame }
   ];
 
   return (
@@ -315,6 +317,7 @@ import AuthModal from './components/AuthModal';function AppContent() {
           <Route path="/challenges" element={<Challenges />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/playground" element={<Playground />} />
+          <Route path="/explore" element={<Explore />} />
           <Route path="/profile" element={<Profile />} />
         </Routes>
       </main>

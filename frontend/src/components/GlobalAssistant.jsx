@@ -30,7 +30,7 @@ export default function GlobalAssistant() {
 
   const [chatOpen, setChatOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'report'
-  const { token } = useContext(AuthContext);
+  const { token, updateUserStats } = useContext(AuthContext);
   const [chatHistory, setChatHistory] = useState([]);
   // Chat session ID for persisting with the backend (null means no session yet)
   const [chatSessionId, setChatSessionId] = useState(null);
@@ -361,9 +361,12 @@ Guide the student step-by-step. Keep explanations clear, engaging, and context-a
         ...updatedHistory
       ];
 
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ 
           messages: payloadMessages,
           mode: aiMode
@@ -396,16 +399,24 @@ Guide the student step-by-step. Keep explanations clear, engaging, and context-a
               if (data.error) {
                 throw new Error(data.error);
               }
+
+              if (data.userStats && updateUserStats) {
+                updateUserStats(data.userStats.newXp, data.userStats.newLevel, data.userStats.streak_count);
+              }
+
               setChatHistory((prev) => {
                 if (prev.length === 0) return prev;
                 const last = prev[prev.length - 1];
                 if (last && last.role === 'assistant') {
+                  const newContent = data.content || '';
+                  const newReasoning = data.reasoning || '';
+                  if (!newContent && !newReasoning) return prev;
                   return [
                     ...prev.slice(0, -1),
                     {
                       ...last,
-                      content: last.content + (data.content || ''),
-                      reasoning: last.reasoning + (data.reasoning || '')
+                      content: last.content + newContent,
+                      reasoning: last.reasoning + newReasoning
                     }
                   ];
                 }

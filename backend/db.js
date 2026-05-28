@@ -33,11 +33,12 @@ async function initDb() {
       );
     `);
 
-    // Add Streak columns if they don't exist
+    // Add Streak and GitHub columns if they don't exist
     await client.query(`
       ALTER TABLE users 
       ADD COLUMN IF NOT EXISTS streak_count INT DEFAULT 0,
-      ADD COLUMN IF NOT EXISTS last_active_date DATE;
+      ADD COLUMN IF NOT EXISTS last_active_date DATE,
+      ADD COLUMN IF NOT EXISTS github_username VARCHAR(100);
     `);
 
     // Create User Progress Table (Roadmap/Topic Completion)
@@ -48,6 +49,27 @@ async function initDb() {
         topic_id VARCHAR(100) NOT NULL,
         completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT unique_user_topic UNIQUE (user_id, topic_id)
+      );
+    `);
+
+    // Create User Activities Table (for Heatmap)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_activities (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        action_type VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Create User Badges Table (for Achievements)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_badges (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        badge_id VARCHAR(50) NOT NULL,
+        earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT unique_user_badge UNIQUE (user_id, badge_id)
       );
     `);
 
@@ -141,9 +163,26 @@ async function initDb() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS shared_snippets (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        code TEXT NOT NULL,
-        language VARCHAR(50) NOT NULL,
+        user_id INT REFERENCES users(id) ON DELETE SET NULL,
+        title VARCHAR(255) DEFAULT 'Untitled Snippet',
+        description TEXT,
+        is_public BOOLEAN DEFAULT FALSE,
+        code TEXT,
+        html_code TEXT,
+        css_code TEXT,
+        language VARCHAR(50) DEFAULT 'javascript',
+        upvotes INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Create Snippet Upvotes Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS snippet_upvotes (
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        snippet_id UUID REFERENCES shared_snippets(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, snippet_id)
       );
     `);
 

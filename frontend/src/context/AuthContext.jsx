@@ -153,10 +153,14 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const updateUserStats = (xp, level) => {
+  const updateUserStats = (xp, level, streakCount) => {
     setUser(prev => {
       if (!prev) return null;
-      return { ...prev, xp, level };
+      const updated = { ...prev, xp, level };
+      if (streakCount !== undefined && streakCount !== null) {
+        updated.streak_count = streakCount;
+      }
+      return updated;
     });
   };
 

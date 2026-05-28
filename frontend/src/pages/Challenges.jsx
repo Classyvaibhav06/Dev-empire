@@ -4,84 +4,7 @@ import { Trophy, Code2, AlertCircle, CheckCircle, Flame, Star, Play, Award, Spar
 import { Card, Badge } from '../components/ui/Shared';
 import { AuthContext } from '../context/AuthContext';
 import { API_BASE_URL } from '../config';
-import CodeMirror from '@uiw/react-codemirror';
-import { javascript } from '@codemirror/lang-javascript';
-import { oneDark } from '@codemirror/theme-one-dark';
-import { autocompletion, closeBrackets } from '@codemirror/autocomplete';
-import { EditorView } from '@codemirror/view';
-
-// ── Custom theme to blend with Dev Empire's design ──
-const devEmpireTheme = EditorView.theme({
-  '&': {
-    fontSize: '13px',
-    fontFamily: '"Fira Code", "Cascadia Code", "JetBrains Mono", monospace',
-    height: '100%',
-    backgroundColor: 'transparent',
-  },
-  '.cm-editor': {
-    height: '100%',
-  },
-  '.cm-scroller': {
-    overflow: 'auto',
-    fontFamily: '"Fira Code", "Cascadia Code", "JetBrains Mono", monospace',
-    lineHeight: '1.75',
-  },
-  '.cm-content': {
-    padding: '16px 0',
-    caretColor: '#7C3AED',
-  },
-  '.cm-gutters': {
-    backgroundColor: '#0a0a0f',
-    borderRight: '1px solid #1e1e2e',
-    color: '#4a4a6a',
-    minWidth: '52px',
-  },
-  '.cm-lineNumbers .cm-gutterElement': {
-    paddingRight: '16px',
-    paddingLeft: '8px',
-  },
-  '.cm-activeLine': {
-    backgroundColor: '#7C3AED15',
-  },
-  '.cm-activeLineGutter': {
-    backgroundColor: '#7C3AED20',
-    color: '#9d78f5',
-  },
-  '.cm-selectionBackground': {
-    backgroundColor: '#7C3AED35',
-  },
-  '&.cm-focused .cm-selectionBackground': {
-    backgroundColor: '#7C3AED40',
-  },
-  '.cm-cursor': {
-    borderLeftColor: '#7C3AED',
-    borderLeftWidth: '2px',
-  },
-  '.cm-matchingBracket': {
-    backgroundColor: '#7C3AED30',
-    color: '#c4b5fd !important',
-    outline: '1px solid #7C3AED60',
-    borderRadius: '2px',
-  },
-  '.cm-tooltip': {
-    backgroundColor: '#13131f',
-    border: '1px solid #1e1e2e',
-    borderRadius: '8px',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
-  },
-  '.cm-tooltip.cm-tooltip-autocomplete > ul': {
-    fontFamily: '"Fira Code", monospace',
-    fontSize: '12px',
-    maxHeight: '200px',
-  },
-  '.cm-tooltip.cm-tooltip-autocomplete > ul > li': {
-    padding: '4px 12px',
-  },
-  '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': {
-    backgroundColor: '#7C3AED40',
-    color: '#c4b5fd',
-  },
-});
+import Editor from '@monaco-editor/react';
 
 const CHALLENGES_DATA = [
   {
@@ -340,12 +263,7 @@ const CHALLENGES_DATA = [
   }
 ];
 
-// ── CodeMirror extensions ──
-const editorExtensions = [
-  javascript({ jsx: true }),
-  autocompletion(),
-  closeBrackets(),
-];
+
 
 export default function Challenges() {
   const { token, updateUserStats } = useContext(AuthContext);
@@ -639,24 +557,21 @@ export default function Challenges() {
                   </div>
                 </div>
 
-                {/* CodeMirror Editor */}
-                <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-                  <CodeMirror
+                {/* Monaco Editor */}
+                <div className="flex-1 overflow-hidden pt-2 bg-[#0a0a0f]" style={{ minHeight: 0 }}>
+                  <Editor
+                    height="100%"
+                    language="javascript"
+                    theme="vs-dark"
                     value={code}
                     onChange={setCode}
-                    theme={oneDark}
-                    extensions={[...editorExtensions, devEmpireTheme]}
-                    height="100%"
-                    style={{ height: '100%', fontSize: '13px' }}
-                    basicSetup={{
-                      lineNumbers: true,
-                      foldGutter: true,
-                      highlightActiveLineGutter: true,
-                      highlightActiveLine: true,
-                      autocompletion: true,
-                      closeBrackets: true,
-                      indentOnInput: true,
-                      tabSize: 2,
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      fontFamily: '"Fira Code", "JetBrains Mono", monospace',
+                      padding: { top: 12 },
+                      scrollBeyondLastLine: false,
+                      smoothScrolling: true,
                     }}
                   />
                 </div>
