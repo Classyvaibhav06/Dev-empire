@@ -364,7 +364,7 @@ const seedData = [
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  
+
   if (!token) return res.status(401).json({ error: 'Access token missing' });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
@@ -408,7 +408,7 @@ app.post('/api/auth/register', async (req, res) => {
 const handleDailyStreak = async (user) => {
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
-  
+
   let streak_count = user.streak_count || 0;
   let last_active = user.last_active_date;
   let xp_gained = 0;
@@ -418,14 +418,14 @@ const handleDailyStreak = async (user) => {
     xp_gained = 5;
   } else {
     // Some DB drivers return Date objects, some return strings
-    const lastActiveStr = (last_active instanceof Date) 
-      ? last_active.toISOString().split('T')[0] 
+    const lastActiveStr = (last_active instanceof Date)
+      ? last_active.toISOString().split('T')[0]
       : new Date(last_active).toISOString().split('T')[0];
-    
+
     if (lastActiveStr === todayStr) {
       return { streak_count, xp_gained: 0, new_level: user.level, new_xp: user.xp };
     }
-    
+
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -495,7 +495,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
     }
     const user = result.rows[0];
     const streakResult = await handleDailyStreak(user);
-    
+
     res.json({
       id: user.id,
       username: user.username,
@@ -519,10 +519,10 @@ app.post('/api/user/achievements/sync', authenticateToken, async (req, res) => {
 
     const userRes = await db.query('SELECT streak_count FROM users WHERE id = $1', [userId]);
     const user = userRes.rows[0] || { streak_count: 0 };
-    
+
     const topicsRes = await db.query('SELECT COUNT(*) as t_count FROM user_progress WHERE user_id = $1', [userId]);
     const topicCount = parseInt(topicsRes.rows[0].t_count, 10);
-    
+
     const quizzesRes = await db.query('SELECT COUNT(*) as q_count FROM concept_scores WHERE user_id = $1 AND score = 100', [userId]);
     const perfectQuizCount = parseInt(quizzesRes.rows[0].q_count, 10);
 
@@ -550,7 +550,7 @@ app.post('/api/user/achievements/sync', authenticateToken, async (req, res) => {
         }
       }
     }
-    
+
     const result = await db.query(`
       SELECT a.*, ua.earned_at 
       FROM user_achievements ua
@@ -558,9 +558,9 @@ app.post('/api/user/achievements/sync', authenticateToken, async (req, res) => {
       WHERE ua.user_id = $1
       ORDER BY ua.earned_at DESC;
     `, [userId]);
-    
+
     const allResult = await db.query('SELECT * FROM achievements ORDER BY id ASC');
-    
+
     res.json({
       earned: result.rows,
       all: allResult.rows,
@@ -680,7 +680,7 @@ app.get('/api/leaderboard', async (req, res) => {
     const topUsersResult = await db.query(
       'SELECT id, username, level, xp FROM users ORDER BY xp DESC LIMIT 50'
     );
-    
+
     let userRank = null;
     if (userId) {
       const rankQuery = `
@@ -836,7 +836,7 @@ app.get('/api/roadmap', async (req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   const { messages, mode } = req.body;
-  
+
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'Invalid messages array' });
   }
@@ -868,7 +868,7 @@ app.post('/api/chat', async (req, res) => {
       const delta = chunk.choices[0]?.delta;
       const content = delta?.content || '';
       const reasoning = delta?.reasoning || delta?.reasoning_content || '';
-      
+
       if (content || reasoning) {
         res.write(`data: ${JSON.stringify({ content, reasoning })}\n\n`);
       }
@@ -938,7 +938,7 @@ app.post('/api/playground/save', authenticateToken, async (req, res) => {
       ON CONFLICT (user_id) 
       DO UPDATE SET code = EXCLUDED.code, updated_at = CURRENT_TIMESTAMP
     `, [req.user.id, code]);
-    
+
     res.json({ message: 'Saved successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -952,6 +952,114 @@ app.get('/api/playground/load', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'No save found' });
     }
     res.json({ code: result.rows[0].code });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const { executeCodeLocally } = require('./executor');
+
+// ==================== PLAYGROUND EXECUTION (LOCAL) ====================
+app.post('/api/playground/execute', async (req, res) => {
+  const { code, language } = req.body;
+  if (!code || !language) return res.status(400).json({ error: 'Code and language are required' });
+
+  try {
+    const data = await executeCodeLocally(language, code);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==================== PLAYGROUND SHARE SNIPPETS ====================
+app.post('/api/playground/share', async (req, res) => {
+  const { code, language } = req.body;
+  if (!code) return res.status(400).json({ error: 'Code is required' });
+
+  try {
+    const result = await db.query(
+      'INSERT INTO shared_snippets (code, language) VALUES ($1, $2) RETURNING id',
+      [code, language || 'javascript']
+    );
+    res.json({ id: result.rows[0].id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/playground/snippet/:id', async (req, res) => {
+  try {
+    const result = await db.query('SELECT code, language FROM shared_snippets WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Snippet not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==================== PROJECT SUBMISSIONS ====================
+app.post('/api/projects/submit', authenticateToken, async (req, res) => {
+  const { topicId, githubUrl, liveUrl } = req.body;
+  if (!topicId || !githubUrl) return res.status(400).json({ error: 'Topic ID and GitHub URL are required' });
+
+  try {
+    await db.query(`
+      INSERT INTO user_projects (user_id, topic_id, github_url, live_url) 
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (user_id, topic_id) 
+      DO UPDATE SET github_url = EXCLUDED.github_url, live_url = EXCLUDED.live_url, created_at = CURRENT_TIMESTAMP
+    `, [req.user.id, topicId, githubUrl, liveUrl || null]);
+    res.json({ message: 'Project submitted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/user/projects', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM user_projects WHERE user_id = $1 ORDER BY created_at DESC', [req.user.id]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==================== TOPIC DISCUSSIONS ====================
+app.get('/api/topics/:topicId/comments', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT c.*, u.username, u.level 
+      FROM topic_comments c
+      JOIN users u ON c.user_id = u.id
+      WHERE c.topic_id = $1
+      ORDER BY c.created_at ASC
+    `, [req.params.topicId]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/topics/:topicId/comments', authenticateToken, async (req, res) => {
+  const { content } = req.body;
+  if (!content) return res.status(400).json({ error: 'Content is required' });
+
+  try {
+    const result = await db.query(`
+      INSERT INTO topic_comments (user_id, topic_id, content) 
+      VALUES ($1, $2, $3) RETURNING *
+    `, [req.user.id, req.params.topicId, content]);
+
+    // Fetch with user details for immediate frontend rendering
+    const commentQuery = await db.query(`
+      SELECT c.*, u.username, u.level 
+      FROM topic_comments c
+      JOIN users u ON c.user_id = u.id
+      WHERE c.id = $1
+    `, [result.rows[0].id]);
+
+    res.json(commentQuery.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

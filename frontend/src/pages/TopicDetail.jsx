@@ -44,6 +44,89 @@ export default function TopicDetail() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiMode, setAiMode] = useState(() => localStorage.getItem('mentor_ai_mode') || 'fast');
 
+  // Project & Community States
+  const [githubUrl, setGithubUrl] = useState('');
+  const [liveUrl, setLiveUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [projectSubmitted, setProjectSubmitted] = useState(false);
+
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [isCommenting, setIsCommenting] = useState(false);
+
+  // Fetch comments on mount/id change
+  useEffect(() => {
+    async function fetchComments() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/topics/${id}/comments`);
+        if (res.ok) {
+          const data = await res.json();
+          setComments(data);
+        }
+      } catch (err) {
+        console.error('Failed to load comments', err);
+      }
+    }
+    fetchComments();
+  }, [id]);
+
+  // Handlers
+  const handleProjectSubmit = async (e) => {
+    e.preventDefault();
+    if (!token) return showToast('Please log in to submit a project.');
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/projects/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ topicId: id, githubUrl, liveUrl })
+      });
+      if (res.ok) {
+        setProjectSubmitted(true);
+        showToast('🎉 Project submitted successfully!');
+        setGithubUrl('');
+        setLiveUrl('');
+      } else {
+        showToast('❌ Failed to submit project.');
+      }
+    } catch (err) {
+      showToast(`❌ Error: ${err.message}`);
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    if (!token) return showToast('Please log in to comment.');
+    if (!newComment.trim()) return;
+    
+    setIsCommenting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/topics/${id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ content: newComment })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setComments([...comments, data]);
+        setNewComment('');
+        showToast('💬 Comment posted!');
+      } else {
+        showToast('❌ Failed to post comment.');
+      }
+    } catch (err) {
+      showToast(`❌ Error: ${err.message}`);
+    }
+    setIsCommenting(false);
+  };
+
   const handleAiModeChange = (mode) => {
     setAiMode(mode);
     localStorage.setItem('mentor_ai_mode', mode);
@@ -802,9 +885,89 @@ Provide a targeted, high-quality, step-by-step interactive explanation of "${cle
                     <AlertCircle className="w-5 h-5 text-primary shrink-0" />
                     <span className="text-xs text-textMuted font-medium">Build the project, test the main behavior, then mark this topic as completed.</span>
                   </div>
+
+                  {/* Project Submission Form */}
+                  <div className="mt-8 pt-8 border-t border-surfaceBorder">
+                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                      <ExternalLink className="w-5 h-5 text-accent" /> Submit Your Work
+                    </h3>
+                    {projectSubmitted ? (
+                      <div className="p-4 rounded-xl bg-success/10 border border-success/30 flex flex-col items-center justify-center text-center">
+                        <CheckCircle className="w-8 h-8 text-success mb-2" />
+                        <p className="text-success font-bold text-sm">Project Submitted Successfully!</p>
+                        <p className="text-textMuted text-xs mt-1">Check your profile portfolio to view it.</p>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleProjectSubmit} className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold text-textDim uppercase tracking-widest mb-1.5">GitHub Repository URL <span className="text-danger">*</span></label>
+                          <input type="url" required value={githubUrl} onChange={e => setGithubUrl(e.target.value)} placeholder="https://github.com/username/repo" className="w-full bg-surface border border-surfaceBorder rounded-lg px-4 py-2 text-sm text-textMain focus:border-primary focus:outline-none transition-colors" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-textDim uppercase tracking-widest mb-1.5">Live Demo URL <span className="text-textMuted lowercase tracking-normal">(optional)</span></label>
+                          <input type="url" value={liveUrl} onChange={e => setLiveUrl(e.target.value)} placeholder="https://myproject.vercel.app" className="w-full bg-surface border border-surfaceBorder rounded-lg px-4 py-2 text-sm text-textMain focus:border-primary focus:outline-none transition-colors" />
+                        </div>
+                        <button type="submit" disabled={isSubmitting || !githubUrl} className="w-full py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white rounded-lg text-sm font-bold uppercase tracking-widest transition-all">
+                          {isSubmitting ? 'Submitting...' : 'Submit to Portfolio'}
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </Card>
               </div>
             )}
+          </div>
+
+          {/* Community Discussions */}
+          <div className="mt-16 animate-slide-up">
+            <h2 className="text-xl font-bold flex items-center gap-2 mb-6">
+              <MessageSquare className="w-5 h-5 text-primary" /> Community Discussions
+            </h2>
+            <Card hover={false} className="!p-6 space-y-6">
+              {/* Comment List */}
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                {comments.length === 0 ? (
+                  <p className="text-textMuted text-sm text-center py-4">No discussions yet. Be the first to ask a question or share a tip!</p>
+                ) : (
+                  comments.map((comment) => (
+                    <div key={comment.id} className="flex gap-4 p-4 rounded-xl bg-surface/50 border border-surfaceBorder/50">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
+                        <span className="text-sm font-bold text-primary uppercase">{comment.username?.slice(0,2) || 'US'}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-bold text-sm text-textMain">{comment.username}</span>
+                          <Badge variant="outline" className="!text-[9px] bg-surface/50">Lv.{comment.level || 1}</Badge>
+                          <span className="text-[10px] text-textDim ml-auto">{new Date(comment.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-sm text-textMuted leading-relaxed break-words">{comment.content}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              
+              {/* Comment Input */}
+              <div className="pt-4 border-t border-surfaceBorder">
+                <form onSubmit={handleCommentSubmit} className="flex gap-3">
+                  <input
+                    type="text"
+                    value={newComment}
+                    onChange={e => setNewComment(e.target.value)}
+                    placeholder={token ? "Ask a question or share a tip..." : "Log in to join the discussion"}
+                    disabled={!token || isCommenting}
+                    className="flex-1 bg-surface border border-surfaceBorder rounded-xl px-4 py-2.5 text-sm text-textMain focus:border-primary focus:outline-none transition-colors disabled:opacity-50"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!token || isCommenting || !newComment.trim()}
+                    className="px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </form>
+              </div>
+            </Card>
           </div>
         </main>
 

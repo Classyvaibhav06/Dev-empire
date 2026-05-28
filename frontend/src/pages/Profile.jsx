@@ -4,7 +4,7 @@ import { Card, Badge } from '../components/ui/Shared';
 import { 
   User, Award, Trophy, BookOpen, Star, 
   ChevronRight, Activity, Zap, CheckCircle2,
-  MoreHorizontal, Flame, Code2
+  MoreHorizontal, Flame, Code2, FolderOpen, ExternalLink
 } from 'lucide-react';
 import { getTopicById } from '../utils/topicContent';
 import { Link, Navigate } from 'react-router-dom';
@@ -18,6 +18,7 @@ export default function Profile() {
   const [conceptScores, setConceptScores] = useState({});
   const [achievementsData, setAchievementsData] = useState({ earned: [], all: [] });
   const [newlyUnlocked, setNewlyUnlocked] = useState([]);
+  const [projects, setProjects] = useState([]);
 
   useEffect(() => {
     const loadProgress = async () => {
@@ -52,8 +53,15 @@ export default function Profile() {
               setNewlyUnlocked(data.newlyUnlocked);
             }
           }
+          
+          const projRes = await fetch(`${API_BASE_URL}/api/user/projects`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (projRes.ok) {
+            setProjects(await projRes.json());
+          }
         } catch (err) {
-          console.error("Failed to sync achievements", err);
+          console.error("Failed to sync profile data", err);
         }
       }
     };
@@ -258,6 +266,46 @@ export default function Profile() {
               )}
             </div>
           </div>
+
+          {/* Portfolio / Submitted Projects */}
+          {projects.length > 0 && (
+            <div className="rounded-xl border border-surfaceBorder bg-surface/40 shadow-sm overflow-hidden mt-6">
+              <div className="p-6 border-b border-surfaceBorder/50 flex items-center justify-between bg-surface/20">
+                <h3 className="text-sm font-semibold text-textMain flex items-center gap-2">
+                  <FolderOpen className="w-4 h-4 text-textMuted" /> Project Portfolio
+                </h3>
+                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20">
+                  {projects.length} Projects
+                </Badge>
+              </div>
+              
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {projects.map(proj => {
+                  const topicDetail = getTopicById(proj.topic_id);
+                  return (
+                    <div key={proj.id} className="flex flex-col p-4 rounded-xl border border-surfaceBorder bg-surface/60 hover:bg-surface transition-colors">
+                      <div className="font-bold text-sm mb-1 text-textMain flex items-center justify-between">
+                        {topicDetail?.project?.title || topicDetail?.title || 'Project'}
+                      </div>
+                      <div className="text-[11px] text-textMuted mb-4 flex-1">
+                        {topicDetail?.project?.description?.slice(0, 80) || 'Hands-on practice project.'}...
+                      </div>
+                      <div className="flex items-center gap-3 mt-auto pt-3 border-t border-surfaceBorder/50">
+                        <a href={proj.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-bold text-textDim hover:text-white transition-colors">
+                          <Code2 className="w-3.5 h-3.5" /> Source
+                        </a>
+                        {proj.live_url && (
+                          <a href={proj.live_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-bold text-accent hover:text-white transition-colors">
+                            <ExternalLink className="w-3.5 h-3.5" /> Live Demo
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Achievements / Badges */}
           <div className="rounded-xl border border-surfaceBorder bg-surface/40 shadow-sm overflow-hidden mt-6">

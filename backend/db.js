@@ -10,6 +10,11 @@ const pool = new Pool({
   }
 });
 
+// Prevent Node.js from crashing on idle connection drops (common with Neon's scale-to-zero)
+pool.on('error', (err, client) => {
+  console.error('Unexpected database error on idle client:', err.message);
+});
+
 async function initDb() {
   const client = await pool.connect();
   try {
@@ -130,6 +135,40 @@ async function initDb() {
         ('quiz_perfect', 'Flawless Victory', 'Score 100% on a concept quiz.', 'Star', 'Rare'),
         ('roadmap_path_1', 'Pathfinder', 'Complete your first roadmap topic.', 'BookOpen', 'Common')
       ON CONFLICT (code) DO NOTHING;
+    `);
+
+    // Create Shared Snippets Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS shared_snippets (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        code TEXT NOT NULL,
+        language VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Create User Projects Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_projects (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        topic_id VARCHAR(100) NOT NULL,
+        github_url TEXT NOT NULL,
+        live_url TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, topic_id)
+      );
+    `);
+
+    // Create Topic Comments Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS topic_comments (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        topic_id VARCHAR(100) NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
 
     console.log('PostgreSQL schema initialized successfully.');
