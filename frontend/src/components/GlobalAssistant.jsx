@@ -181,18 +181,18 @@ export default function GlobalAssistant() {
   useEffect(() => {
     if (chatSessionId && token && chatHistory.length === 0 && lastSyncedChatRef.current) {
       fetch(`${API_BASE_URL}/api/chat-sessions/${chatSessionId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ messages: chatHistory })
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ messages: chatHistory })
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error('Failed to update chat session');
+          lastSyncedChatRef.current = JSON.stringify(chatHistory);
         })
-          .then((res) => {
-            if (!res.ok) throw new Error('Failed to update chat session');
-            lastSyncedChatRef.current = JSON.stringify(chatHistory);
-          })
-          .catch((e) => console.error('Failed to sync chat session', e));
+        .catch((e) => console.error('Failed to sync chat session', e));
     }
   }, [chatHistory, token, chatSessionId]);
 
@@ -285,7 +285,7 @@ export default function GlobalAssistant() {
             `Give me a practice exercise for this`,
             `How does this relate to other topics?`
           ];
-        } catch (e) {}
+        } catch (e) { }
       } else {
         try {
           const topic = getTopicById(topicId);
@@ -295,7 +295,7 @@ export default function GlobalAssistant() {
             `Give me a real-world example`,
             `Quiz me on ${topic.title}`
           ];
-        } catch (e) {}
+        } catch (e) { }
       }
     } else if (path === '/roadmap') {
       return [
@@ -312,7 +312,7 @@ export default function GlobalAssistant() {
         `Explain what my code does step-by-step`
       ];
     }
-    
+
     // Default fallback
     return [
       `How do I start learning programming?`,
@@ -333,12 +333,12 @@ export default function GlobalAssistant() {
         try {
           const concept = getConceptDetail(topicId, conceptIndex);
           contextMessage = `The user is currently studying the concept "${concept.title}" under the topic "${concept.topic.title}". Here are details of the concept:\n- Summary: ${concept.summary}\n- Anatomy: ${JSON.stringify(concept.anatomy)}\n- Rules: ${JSON.stringify(concept.rules)}`;
-        } catch (e) {}
+        } catch (e) { }
       } else {
         try {
           const topic = getTopicById(topicId);
           contextMessage = `The user is currently studying the topic "${topic.title}". Here are details:\n- Description: ${topic.description}\n- Key Concepts: ${JSON.stringify(topic.keyConcepts)}`;
-        } catch (e) {}
+        } catch (e) { }
       }
     } else if (path === '/roadmap') {
       contextMessage = `The user is currently looking at the main Roadmap list of all learning paths (Frontend, Backend, Fullstack, AI/ML).`;
@@ -401,7 +401,7 @@ Guide the student step-by-step. Keep explanations clear, engaging, and context-a
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           messages: payloadMessages,
           mode: aiMode
         })
@@ -523,19 +523,19 @@ Guide the student step-by-step. Keep explanations clear, engaging, and context-a
 
   const handleFixWithErrorAI = () => {
     if (!errorDetails) return;
-    
+
     // Bypass asynchronous loading of past sessions when opening the drawer
     skipNextSessionLoadRef.current = true;
-    
+
     setChatOpen(true);
     setActiveTab('chat');
     setShowErrorHelp(false);
-    
+
     // Clear the active session and history to ensure a new chat session is started
     setChatSessionId(null);
     localStorage.removeItem('previous_chat_history');
     setShowHistoryPrompt(false);
-    
+
     const debugMessage = `I just encountered a code execution error in the Playground using ${errorDetails.language}.
 Here is the error output:
 \`\`\`
@@ -573,7 +573,7 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           messages: [
             { role: 'system', content: 'You are the Dev Empire AI Study Auditor. Generate beautiful, professional markdown progress audits.' },
             { role: 'user', content: prompt }
@@ -639,18 +639,18 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
     <>
       {/* ── FLOATING CHAT BUBBLE ── */}
       <div className={`fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-40 transition-transform duration-500 ease-in-out drawer-shift-element ${chatOpen ? 'opacity-0 pointer-events-none' : ''}`}>
-        
+
         {/* Error Help Notification Popup */}
         {showErrorHelp && errorDetails && (
           <div className="absolute right-16 bottom-2 mb-2 mr-2 w-80 bg-surface/80 backdrop-blur-2xl border border-surfaceBorder rounded-2xl p-4 shadow-2xl animate-fade-in flex flex-col gap-3.5 z-50 transform transition-all duration-300 ease-out">
             {/* Close Button */}
-            <button 
+            <button
               onClick={(e) => { e.stopPropagation(); setShowErrorHelp(false); }}
               className="absolute top-3 right-3 text-textMuted hover:text-textMain hover:bg-surfaceHover rounded-full p-1.5 transition-all cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
-            
+
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-xl bg-danger/10 text-danger shrink-0 shadow-inner">
                 <AlertCircle className="w-4 h-4" />
@@ -664,12 +664,12 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
                 </p>
               </div>
             </div>
-            
+
             <button
               onClick={handleFixWithErrorAI}
               className="w-full py-2.5 bg-surface text-textMain border border-surfaceBorder hover:border-primary/50 hover:bg-primary/5 hover:text-primary font-semibold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm group cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-primary group-hover:scale-110 transition-transform duration-300" /> 
+              <Sparkles className="w-4 h-4 text-primary group-hover:scale-110 transition-transform duration-300" />
               Analyze & Fix Issue
             </button>
           </div>
@@ -685,13 +685,13 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
       </div>
 
       {/* ── BACKDROP OVERLAY ── */}
-      <div 
+      <div
         className={`fixed inset-0 z-50 bg-background/70 backdrop-blur-md transition-all duration-500 ${chatOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setChatOpen(false)}
       />
 
       {/* ── DRAWER CONTAINER ── */}
-      <div 
+      <div
         className={`fixed top-0 right-0 bottom-0 lg:top-4 lg:bottom-4 lg:right-4 z-[100] w-full max-w-lg bg-surface lg:rounded-2xl border-l lg:border border-surfaceBorder shadow-2xl flex flex-col transition-all duration-500 ease-out ${chatOpen ? 'translate-x-0 opacity-100' : 'translate-x-[120%] lg:translate-x-[150%] opacity-0'}`}
       >
         {/* Header */}
@@ -716,7 +716,7 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
             </div>
             <div className="flex items-center gap-2">
               {chatHistory.length > 0 && (
-                <button 
+                <button
                   onClick={handleClearChat}
                   title="Clear Chat History"
                   className="h-9 w-9 inline-flex items-center justify-center rounded-md hover:bg-surfaceHover text-textDim hover:text-textMain transition-colors cursor-pointer"
@@ -724,7 +724,7 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
-              <button 
+              <button
                 onClick={() => setChatOpen(false)}
                 className="h-9 w-9 inline-flex items-center justify-center rounded-md hover:bg-surfaceHover text-textDim hover:text-textMain transition-colors cursor-pointer"
               >
@@ -738,28 +738,26 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
             <button
               onClick={() => handleAiModeChange('fast')}
               type="button"
-              className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-sm text-xs font-medium transition-all duration-200 cursor-pointer relative z-10 ${
-                aiMode === 'fast'
+              className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-sm text-xs font-medium transition-all duration-200 cursor-pointer relative z-10 ${aiMode === 'fast'
                   ? 'text-textMain shadow-sm'
                   : 'text-textDim hover:text-textMain'
-              }`}
+                }`}
             >
               <Zap className="w-3.5 h-3.5" /> Fast
             </button>
             <button
               onClick={() => handleAiModeChange('reasoning')}
               type="button"
-              className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-sm text-xs font-medium transition-all duration-200 cursor-pointer relative z-10 ${
-                aiMode === 'reasoning'
+              className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-sm text-xs font-medium transition-all duration-200 cursor-pointer relative z-10 ${aiMode === 'reasoning'
                   ? 'text-textMain shadow-sm'
                   : 'text-textDim hover:text-textMain'
-              }`}
+                }`}
             >
               <BrainCircuit className="w-3.5 h-3.5" /> Reasoning
             </button>
-            
+
             {/* Sliding highlight pill */}
-            <div 
+            <div
               className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-surface rounded-sm transition-transform duration-300 ease-out shadow-sm border border-surfaceBorder"
               style={{ transform: aiMode === 'fast' ? 'translateX(0)' : 'translateX(100%)', left: '4px' }}
             ></div>
@@ -770,18 +768,16 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
         <div className="flex shrink-0 px-4 pt-2 border-b border-surfaceBorder">
           <button
             onClick={() => setActiveTab('chat')}
-            className={`flex-1 pb-3 text-sm font-medium transition-all relative group flex items-center justify-center gap-2 ${
-              activeTab === 'chat' ? 'text-textMain' : 'text-textDim hover:text-textMain'
-            }`}
+            className={`flex-1 pb-3 text-sm font-medium transition-all relative group flex items-center justify-center gap-2 ${activeTab === 'chat' ? 'text-textMain' : 'text-textDim hover:text-textMain'
+              }`}
           >
             <MessageSquare className="w-4 h-4" /> Chat
             <div className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full transition-all duration-300 ${activeTab === 'chat' ? 'bg-primary' : 'bg-transparent'}`} />
           </button>
           <button
             onClick={() => setActiveTab('report')}
-            className={`flex-1 pb-3 text-sm font-medium transition-all relative group flex items-center justify-center gap-2 ${
-              activeTab === 'report' ? 'text-textMain' : 'text-textDim hover:text-textMain'
-            }`}
+            className={`flex-1 pb-3 text-sm font-medium transition-all relative group flex items-center justify-center gap-2 ${activeTab === 'report' ? 'text-textMain' : 'text-textDim hover:text-textMain'
+              }`}
           >
             <TrendingUp className="w-4 h-4" /> Report
             <div className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full transition-all duration-300 ${activeTab === 'report' ? 'bg-primary' : 'bg-transparent'}`} />
@@ -791,7 +787,7 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
         {/* ── TAB CONTENT: CHAT ── */}
         {activeTab === 'chat' && (
           <>
-            <div 
+            <div
               className="flex-1 overflow-y-auto p-6 bg-transparent custom-scrollbar"
               ref={scrollContainerRef}
               onScroll={handleScroll}
@@ -856,30 +852,29 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
               ) : (
                 <div className="space-y-6">
                   {chatHistory.map((msg, index) => (
-                    <div 
+                    <div
                       key={index}
                       className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                     >
                       {msg.role === 'assistant' && (
-                         <div className="flex items-center gap-2 mb-2 ml-1">
-                           <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md border border-white/20">
-                             <img src="https://cdn-icons-png.flaticon.com/512/8049/8049563.png" alt="Bot Icon" className="w-4 h-4 drop-shadow-sm" />
-                           </div>
-                           <span className="text-[10px] font-black uppercase tracking-wider text-textDim">Mentor</span>
-                         </div>
+                        <div className="flex items-center gap-2 mb-2 ml-1">
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md border border-white/20">
+                            <img src="https://cdn-icons-png.flaticon.com/512/8049/8049563.png" alt="Bot Icon" className="w-4 h-4 drop-shadow-sm" />
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-wider text-textDim">Mentor</span>
+                        </div>
                       )}
                       {msg.role === 'user' && (
-                         <div className="flex items-center gap-2 mb-2 mr-1">
-                           <span className="text-[10px] font-black uppercase tracking-wider text-textDim">You</span>
-                         </div>
+                        <div className="flex items-center gap-2 mb-2 mr-1">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-textDim">You</span>
+                        </div>
                       )}
-                      
-                      <div 
-                        className={`max-w-[85%] relative group animate-slide-up ${
-                          msg.role === 'user'
+
+                      <div
+                        className={`max-w-[85%] relative group animate-slide-up ${msg.role === 'user'
                             ? 'bg-primary text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm'
                             : 'bg-surfaceLight border border-surfaceBorder text-textMain rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm'
-                        }`}
+                          }`}
                       >
                         {msg.role === 'assistant' && <ThinkingBlock reasoning={msg.reasoning} />}
                         {msg.role === 'assistant' && !msg.content && !msg.reasoning ? (
@@ -910,11 +905,11 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
 
             {/* Input Form */}
             <div className="p-4 bg-surface border-t border-surfaceBorder shrink-0 lg:rounded-b-2xl">
-              <form 
-                onSubmit={handleSendChat} 
+              <form
+                onSubmit={handleSendChat}
                 className="flex gap-2 items-center"
               >
-                <input 
+                <input
                   type="text"
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
@@ -922,7 +917,7 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
                   placeholder="Ask your mentor a question..."
                   className="flex-1 px-3 py-2 bg-transparent text-sm text-textMain placeholder:text-textDim border border-surfaceBorder rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-primary shadow-sm disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
                 />
-                <button 
+                <button
                   type="submit"
                   disabled={!inputMessage.trim() || isGenerating}
                   className="h-9 w-9 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
@@ -963,7 +958,7 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
                 <Badge variant="muted" className="text-xs">{totalAttempted} / 55</Badge>
               </div>
               <div className="w-full bg-surfaceLight h-2 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="bg-primary h-full transition-all duration-500 ease-out rounded-full"
                   style={{ width: `${Math.min(100, Math.max(2, (totalAttempted / 55) * 100))}%` }}
                 >
@@ -981,7 +976,7 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
                   AI Progress Audit
                 </h4>
                 {totalAttempted > 0 && (
-                  <button 
+                  <button
                     onClick={clearScores}
                     className="text-[10px] uppercase tracking-widest text-danger font-bold flex items-center gap-1.5 hover:bg-danger/10 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                   >
@@ -993,16 +988,16 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
               {aiReport ? (
                 <div className="bg-surface border border-surfaceBorder shadow-sm rounded-2xl p-6 text-sm leading-relaxed text-textMain max-w-full overflow-x-auto">
                   {formatMessageContent(aiReport)}
-                  
+
                   <button
                     onClick={handleGenerateReport}
                     disabled={isAnalyzing}
                     className="mt-8 w-full py-4 bg-surfaceLight border border-surfaceBorder text-textMain font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-surfaceHover hover:border-surfaceBorderHover transition-all flex items-center justify-center gap-2 cursor-pointer group"
                   >
                     {isAnalyzing ? (
-                       <><Activity className="w-4 h-4 animate-pulse text-primary" /> Analyzing...</>
+                      <><Activity className="w-4 h-4 animate-pulse text-primary" /> Analyzing...</>
                     ) : (
-                       <><Activity className="w-4 h-4 text-textDim group-hover:text-primary transition-colors" /> Re-Generate Audit</>
+                      <><Activity className="w-4 h-4 text-textDim group-hover:text-primary transition-colors" /> Re-Generate Audit</>
                     )}
                   </button>
                 </div>
@@ -1068,7 +1063,7 @@ function ThinkingBlock({ reasoning }) {
   if (!reasoning) return null;
   return (
     <div className="mb-4 overflow-hidden rounded-xl bg-background/80 border border-surfaceBorder/80 backdrop-blur-md shadow-inner transition-all duration-300">
-      <button 
+      <button
         type="button"
         onClick={() => setOpen(!open)}
         className="flex items-center justify-between w-full px-4 py-2.5 text-left bg-surfaceLight/50 hover:bg-surfaceLight transition-colors focus:outline-none group cursor-pointer"
@@ -1111,8 +1106,12 @@ function formatMessageContent(text) {
       );
     }
 
+    // Convert Setext headings (==== and ----) to ATX headings (# and ##)
+    let processedPart = part.replace(/^([^\n]+)\n={3,}\s*$/gm, '# $1');
+    processedPart = processedPart.replace(/^([^\n]+)\n-{3,}\s*$/gm, '## $1');
+
     // Process bold text, list markers, and standard breaks
-    const lines = part.split('\n');
+    const lines = processedPart.split('\n');
     return (
       <div key={partIndex} className="space-y-2">
         {lines.map((line, lineIndex) => {
@@ -1154,11 +1153,10 @@ function formatMessageContent(text) {
             const matchAlert = trimmed.match(/^>\s*\[!(\w+)\]/);
             const alertType = matchAlert ? matchAlert[1].toUpperCase() : 'NOTE';
             return (
-              <div key={lineIndex} className={`p-4 my-3 rounded-xl border border-l-4 text-xs ${
-                alertType === 'WARNING' || alertType === 'CAUTION'
+              <div key={lineIndex} className={`p-4 my-3 rounded-xl border border-l-4 text-xs ${alertType === 'WARNING' || alertType === 'CAUTION'
                   ? 'bg-danger/5 border-danger/20 border-l-danger text-danger'
                   : 'bg-primary/5 border-primary/20 border-l-primary text-textMuted'
-              }`}>
+                }`}>
                 <span className="font-black block uppercase tracking-wider text-[9px] mb-1">{alertType}</span>
                 {renderInlineFormatting(lines.slice(lineIndex + 1).join('\n').split('\n')[0].replace(/^>\s*/, ''))}
               </div>
