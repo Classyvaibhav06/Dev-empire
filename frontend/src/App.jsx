@@ -1,18 +1,26 @@
+import { lazy, Suspense, useEffect, useState, useContext } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Terminal, Code2, Zap, BookOpen, Trophy, Sun, Moon, User, LogOut, ChevronDown, Award, Menu, X, Flame } from 'lucide-react';
 import Home from './pages/Home';
-import Challenges from './pages/Challenges';
 import GlobalAssistant from './components/GlobalAssistant';
-import Roadmap from './pages/Roadmap';
-import TopicDetail from './pages/TopicDetail';
-import ConceptDetail from './pages/ConceptDetail';
-import Leaderboard from './pages/Leaderboard';
-import Playground from './pages/Playground';
-import Profile from './pages/Profile';
-import Explore from './pages/Explore';
-import { useEffect, useState, useContext } from 'react';
 import { AuthProvider, AuthContext } from './context/AuthContext';
-import AuthModal from './components/AuthModal';function AppContent() {
+import AuthModal from './components/AuthModal';
+import { loader } from '@monaco-editor/react';
+
+// Configure Monaco Editor CDN paths to prevent local bundle bloat
+loader.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs' } });
+
+// Lazy load route pages to enable Vite code splitting chunks
+const Challenges = lazy(() => import('./pages/Challenges'));
+const Roadmap = lazy(() => import('./pages/Roadmap'));
+const TopicDetail = lazy(() => import('./pages/TopicDetail'));
+const ConceptDetail = lazy(() => import('./pages/ConceptDetail'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const Playground = lazy(() => import('./pages/Playground'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Explore = lazy(() => import('./pages/Explore'));
+
+function AppContent() {
   const { pathname } = useLocation();
   const { user, setAuthModalOpen, logout } = useContext(AuthContext);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -309,17 +317,23 @@ import AuthModal from './components/AuthModal';function AppContent() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col relative z-10">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/roadmap" element={<Roadmap />} />
-          <Route path="/topic/:id" element={<TopicDetail />} />
-          <Route path="/topic/:id/concept/:conceptIndex" element={<ConceptDetail />} />
-          <Route path="/challenges" element={<Challenges />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-          <Route path="/playground" element={<Playground />} />
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/profile" element={<Profile />} />
-        </Routes>
+        <Suspense fallback={
+          <div className="flex-1 flex justify-center items-center py-20 bg-background">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        }>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/roadmap" element={<Roadmap />} />
+            <Route path="/topic/:id" element={<TopicDetail />} />
+            <Route path="/topic/:id/concept/:conceptIndex" element={<ConceptDetail />} />
+            <Route path="/challenges" element={<Challenges />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/playground" element={<Playground />} />
+            <Route path="/explore" element={<Explore />} />
+            <Route path="/profile" element={<Profile />} />
+          </Routes>
+        </Suspense>
       </main>
 
       <GlobalAssistant />

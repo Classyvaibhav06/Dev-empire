@@ -92,19 +92,23 @@ const getBadges = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
-    // Get User profile information
-    const userResult = await db.query('SELECT id, username, email, level, xp, streak_count, github_username FROM users WHERE id = $1', [req.user.id]);
+    // Fetch user details, progress, scores, and challenges in parallel to speed up loading
+    const [userResult, progressResult, scoresResult, challengesResult] = await Promise.all([
+      db.query('SELECT id, username, email, level, xp, streak_count, github_username FROM users WHERE id = $1', [req.user.id]),
+      db.query('SELECT topic_id FROM user_progress WHERE user_id = $1', [req.user.id]),
+      db.query('SELECT * FROM concept_scores WHERE user_id = $1', [req.user.id]),
+      db.query('SELECT challenge_id FROM completed_challenges WHERE user_id = $1', [req.user.id])
+    ]);
+
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
     const user = userResult.rows[0];
 
     // Get Completed topics array
-    const progressResult = await db.query('SELECT topic_id FROM user_progress WHERE user_id = $1', [req.user.id]);
     const completedTopics = progressResult.rows.map(row => row.topic_id);
 
     // Get Concept quiz scores dictionary
-    const scoresResult = await db.query('SELECT * FROM concept_scores WHERE user_id = $1', [req.user.id]);
     const conceptScores = {};
     scoresResult.rows.forEach(row => {
       conceptScores[row.concept_key] = {
@@ -118,7 +122,6 @@ const getProfile = async (req, res) => {
     });
 
     // Get Completed Challenges list
-    const challengesResult = await db.query('SELECT challenge_id FROM completed_challenges WHERE user_id = $1', [req.user.id]);
     const completedChallenges = challengesResult.rows.map(row => row.challenge_id);
 
     res.json({

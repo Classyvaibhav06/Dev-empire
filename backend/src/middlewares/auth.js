@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
+require('dotenv').config({ override: true });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_dev_empire_jwt_token_key_1234';
 

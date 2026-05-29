@@ -1,12 +1,15 @@
 const { Pool } = require('pg');
-require('dotenv').config();
+require('dotenv').config({ override: true });
 
 const connectionString = process.env.DATABASE_URL;
 
 const pool = new Pool({
   connectionString,
+  max: 20,                          // Maximum connection pool size
+  idleTimeoutMillis: 30000,         // Close idle connections after 30 seconds
+  connectionTimeoutMillis: 15000,   // Allow up to 15 seconds for Neon cold starts
   ssl: {
-    rejectUnauthorized: false // Required for Neon cloud connection
+    rejectUnauthorized: false       // Required for Neon cloud connection
   }
 });
 
@@ -208,6 +211,17 @@ async function initDb() {
         content TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    // Speed up queries on user reference joins and heatmap date ranges (indices)
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_user_activities_user_id ON user_activities(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_progress_user_id ON user_progress(user_id);
+      CREATE INDEX IF NOT EXISTS idx_concept_scores_user_id ON concept_scores(user_id);
+      CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id);
+      CREATE INDEX IF NOT EXISTS idx_completed_challenges_user_id ON completed_challenges(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_badges_user_id ON user_badges(user_id);
+      CREATE INDEX IF NOT EXISTS idx_shared_snippets_user_id ON shared_snippets(user_id);
     `);
 
     console.log('PostgreSQL schema initialized successfully.');

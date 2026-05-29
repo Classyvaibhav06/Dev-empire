@@ -97,18 +97,28 @@ const streamChat = async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
 
     const useFast = (mode === 'fast');
-    const modelName = useFast ? "meta/llama-3.1-8b-instruct" : "deepseek-ai/deepseek-v4-flash";
+    
+    // Dynamically detect Groq and set appropriate models/options
+    const isGroq = (openai.baseURL && openai.baseURL.includes('groq')) || 
+                   (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.includes('groq'));
+    
+    let modelName;
+    if (isGroq) {
+      modelName = useFast ? "llama-3.1-8b-instant" : "deepseek-r1-distill-llama-70b";
+    } else {
+      modelName = useFast ? "meta/llama-3.1-8b-instruct" : "deepseek-ai/deepseek-v4-flash";
+    }
 
     const completionOptions = {
       model: modelName,
       messages: messages,
       temperature: 0.7,
       top_p: 0.95,
-      max_tokens: useFast ? 4096 : 16384,
+      max_tokens: useFast ? 4096 : (isGroq ? 4096 : 16384),
       stream: true,
     };
 
-    if (!useFast) {
+    if (!useFast && !isGroq) {
       completionOptions.chat_template_kwargs = { "thinking": true, "reasoning_effort": "high" };
     }
 
@@ -165,8 +175,12 @@ Generate an exhaustive, deep-dive explanation for this specific component. Inclu
 
 Keep your response professional, engaging, formatted in clean markdown without title headings (use bold text or paragraphs for subheadings), and about 250-350 words of high-density learning material.`;
 
+    const isGroq = (openai.baseURL && openai.baseURL.includes('groq')) || 
+                   (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.includes('groq'));
+    const modelName = isGroq ? "llama-3.1-8b-instant" : "meta/llama-3.1-8b-instruct";
+
     const completion = await openai.chat.completions.create({
-      model: "meta/llama-3.1-8b-instruct",
+      model: modelName,
       messages: [
         { role: "system", content: "You are an expert curriculum designer. Provide rich, technical, and clear explanations in markdown." },
         { role: "user", content: prompt }

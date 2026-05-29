@@ -14,13 +14,27 @@ const getRoadmap = async (req, res) => {
   }
 };
 
+let cachedLeaderboard = null;
+let lastCacheTime = 0;
+
 const getLeaderboard = async (req, res) => {
   try {
     const { userId } = req.query;
+    const now = Date.now();
 
-    const topUsersResult = await db.query(
-      'SELECT id, username, level, xp FROM users ORDER BY xp DESC LIMIT 50'
-    );
+    let topUsers;
+
+    // Check if in-memory cache is valid (60 seconds) to cut Neon DB load
+    if (cachedLeaderboard && (now - lastCacheTime < 60000)) {
+      topUsers = cachedLeaderboard;
+    } else {
+      const topUsersResult = await db.query(
+        'SELECT id, username, level, xp FROM users ORDER BY xp DESC LIMIT 50'
+      );
+      topUsers = topUsersResult.rows;
+      cachedLeaderboard = topUsers;
+      lastCacheTime = now;
+    }
 
     let userRank = null;
     if (userId) {
@@ -38,8 +52,8 @@ const getLeaderboard = async (req, res) => {
     }
 
     res.json({
-      topUsers: topUsersResult.rows,
-      userRank: userRank
+      topUsers,
+      userRank
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

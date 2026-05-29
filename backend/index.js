@@ -1,6 +1,6 @@
 const app = require('./src/app');
 const db = require('./src/config/db');
-require('dotenv').config();
+require('dotenv').config({ override: true });
 
 const PORT = process.env.PORT || 5000;
 

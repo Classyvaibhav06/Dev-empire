@@ -49,6 +49,7 @@ export default function GlobalAssistant() {
   const syncTimeoutRef = useRef(null);
   const isCreatingSessionRef = useRef(false);
   const lastSyncedChatRef = useRef('');
+  const skipNextSessionLoadRef = useRef(false);
 
   // Playground Context State
   const [playgroundContext, setPlaygroundContext] = useState(null);
@@ -60,9 +61,41 @@ export default function GlobalAssistant() {
     return () => window.removeEventListener('playgroundCodeUpdate', handleContextUpdate);
   }, []);
 
+  const [showErrorHelp, setShowErrorHelp] = useState(false);
+  const [errorDetails, setErrorDetails] = useState(null);
+  const errorTimeoutRef = useRef(null);
+
+  // Listen for playground code errors
+  useEffect(() => {
+    const handleErrorEvent = (e) => {
+      setErrorDetails(e.detail);
+      setShowErrorHelp(true);
+
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+
+      errorTimeoutRef.current = setTimeout(() => {
+        setShowErrorHelp(false);
+      }, 12000);
+    };
+
+    window.addEventListener('playgroundCodeError', handleErrorEvent);
+    return () => {
+      window.removeEventListener('playgroundCodeError', handleErrorEvent);
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Load existing chat session from DB when drawer opens (if logged in)
   useEffect(() => {
     if (chatOpen && token) {
+      if (skipNextSessionLoadRef.current) {
+        skipNextSessionLoadRef.current = false;
+        return;
+      }
       // Try to fetch the latest session for the user
       fetch(`${API_BASE_URL}/api/chat-sessions`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -333,12 +366,12 @@ ${scoreProfile}
 Guide the student step-by-step. Keep explanations clear, engaging, and context-aware. Provide helpful code examples if requested. When displaying code, use markdown syntax highlighting. Respond using markdown formatting.`;
   };
 
-  const handleSendChat = async (e, customMessage = null) => {
+  const handleSendChat = async (e, customMessage = null, isNewChat = false) => {
     if (e) e.preventDefault();
     const userMsgText = customMessage || inputMessage;
     if (!userMsgText.trim() || isGenerating) return;
 
-    if (showHistoryPrompt) {
+    if (showHistoryPrompt || isNewChat) {
       localStorage.removeItem('previous_chat_history');
       setShowHistoryPrompt(false);
     }
@@ -348,11 +381,12 @@ Guide the student step-by-step. Keep explanations clear, engaging, and context-a
     setIsAtBottom(true);
 
     const newUserMsg = { role: 'user', content: userMsgText };
-    const updatedHistory = [...chatHistory, newUserMsg];
+    const baseHistory = isNewChat ? [] : chatHistory;
+    const updatedHistory = [...baseHistory, newUserMsg];
     setChatHistory(updatedHistory);
 
     const newAssistantMsg = { role: 'assistant', content: '', reasoning: '' };
-    setChatHistory((prev) => [...prev, newAssistantMsg]);
+    setChatHistory(() => [...updatedHistory, newAssistantMsg]);
 
     try {
       const systemPrompt = getContextPrompt();
@@ -381,52 +415,93 @@ Guide the student step-by-step. Keep explanations clear, engaging, and context-a
       const decoder = new TextDecoder();
       let buffer = '';
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
+      let accumulatedContent = '';
+      let accumulatedReasoning = '';
+      let lastFlushTime = Date.now();
+      let flushTimeout = null;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+      const flushState = () => {
+        if (!accumulatedContent && !accumulatedReasoning) return;
+        const contentToAppend = accumulatedContent;
+        const reasoningToAppend = accumulatedReasoning;
+        accumulatedContent = '';
+        accumulatedReasoning = '';
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) continue;
-          if (trimmed === 'data: [DONE]') continue;
-          if (trimmed.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(trimmed.slice(6));
-              if (data.error) {
-                throw new Error(data.error);
+        setChatHistory((prev) => {
+          if (prev.length === 0) return prev;
+          const last = prev[prev.length - 1];
+          if (last && last.role === 'assistant') {
+            return [
+              ...prev.slice(0, -1),
+              {
+                ...last,
+                content: last.content + contentToAppend,
+                reasoning: last.reasoning + reasoningToAppend
               }
+            ];
+          }
+          return prev;
+        });
+      };
 
-              if (data.userStats && updateUserStats) {
-                updateUserStats(data.userStats.newXp, data.userStats.newLevel, data.userStats.streak_count);
-              }
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
 
-              setChatHistory((prev) => {
-                if (prev.length === 0) return prev;
-                const last = prev[prev.length - 1];
-                if (last && last.role === 'assistant') {
-                  const newContent = data.content || '';
-                  const newReasoning = data.reasoning || '';
-                  if (!newContent && !newReasoning) return prev;
-                  return [
-                    ...prev.slice(0, -1),
-                    {
-                      ...last,
-                      content: last.content + newContent,
-                      reasoning: last.reasoning + newReasoning
-                    }
-                  ];
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            if (trimmed === 'data: [DONE]') continue;
+            if (trimmed.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(trimmed.slice(6));
+                if (data.error) {
+                  throw new Error(data.error);
                 }
-                return prev;
-              });
-            } catch (err) {
-              console.error('Failed to parse line:', line, err);
+
+                if (data.userStats && updateUserStats) {
+                  updateUserStats(data.userStats.newXp, data.userStats.newLevel, data.userStats.streak_count);
+                }
+
+                const newContent = data.content || '';
+                const newReasoning = data.reasoning || '';
+                accumulatedContent += newContent;
+                accumulatedReasoning += newReasoning;
+
+                const now = Date.now();
+                if (now - lastFlushTime >= 50) {
+                  if (flushTimeout) {
+                    clearTimeout(flushTimeout);
+                    flushTimeout = null;
+                  }
+                  flushState();
+                  lastFlushTime = now;
+                } else {
+                  if (!flushTimeout) {
+                    flushTimeout = setTimeout(() => {
+                      flushState();
+                      lastFlushTime = Date.now();
+                      flushTimeout = null;
+                    }, 50 - (now - lastFlushTime));
+                  }
+                }
+              } catch (err) {
+                console.error('Failed to parse line:', line, err);
+              }
             }
           }
         }
+      } finally {
+        if (flushTimeout) {
+          clearTimeout(flushTimeout);
+          flushTimeout = null;
+        }
+        flushState();
       }
     } catch (err) {
       console.error('Chat error:', err);
@@ -444,6 +519,37 @@ Guide the student step-by-step. Keep explanations clear, engaging, and context-a
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleFixWithErrorAI = () => {
+    if (!errorDetails) return;
+    
+    // Bypass asynchronous loading of past sessions when opening the drawer
+    skipNextSessionLoadRef.current = true;
+    
+    setChatOpen(true);
+    setActiveTab('chat');
+    setShowErrorHelp(false);
+    
+    // Clear the active session and history to ensure a new chat session is started
+    setChatSessionId(null);
+    localStorage.removeItem('previous_chat_history');
+    setShowHistoryPrompt(false);
+    
+    const debugMessage = `I just encountered a code execution error in the Playground using ${errorDetails.language}.
+Here is the error output:
+\`\`\`
+${errorDetails.errorMessage}
+\`\`\`
+
+Here is my current code:
+\`\`\`${errorDetails.language}
+${errorDetails.code}
+\`\`\`
+
+Can you help me understand what is wrong and how to fix it?`;
+
+    handleSendChat(null, debugMessage, true);
   };
 
   const handleGenerateReport = async () => {
@@ -533,6 +639,42 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
     <>
       {/* ── FLOATING CHAT BUBBLE ── */}
       <div className={`fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-40 transition-transform duration-500 ease-in-out drawer-shift-element ${chatOpen ? 'opacity-0 pointer-events-none' : ''}`}>
+        
+        {/* Error Help Notification Popup */}
+        {showErrorHelp && errorDetails && (
+          <div className="absolute right-16 bottom-2 mb-2 mr-2 w-80 bg-surface/80 backdrop-blur-2xl border border-surfaceBorder rounded-2xl p-4 shadow-2xl animate-fade-in flex flex-col gap-3.5 z-50 transform transition-all duration-300 ease-out">
+            {/* Close Button */}
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowErrorHelp(false); }}
+              className="absolute top-3 right-3 text-textMuted hover:text-textMain hover:bg-surfaceHover rounded-full p-1.5 transition-all cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+            
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-danger/10 text-danger shrink-0 shadow-inner">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+              <div className="pr-5 flex-1">
+                <h5 className="text-sm font-bold text-textMain tracking-tight">
+                  Error Detected
+                </h5>
+                <p className="text-xs text-textMuted mt-1 leading-relaxed line-clamp-2 font-mono bg-surfaceLight/50 px-2 py-1 rounded-md border border-surfaceBorder/50">
+                  {errorDetails.errorMessage}
+                </p>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleFixWithErrorAI}
+              className="w-full py-2.5 bg-surface text-textMain border border-surfaceBorder hover:border-primary/50 hover:bg-primary/5 hover:text-primary font-semibold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm group cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-primary group-hover:scale-110 transition-transform duration-300" /> 
+              Analyze & Fix Issue
+            </button>
+          </div>
+        )}
+
         <button
           onClick={() => setChatOpen(!chatOpen)}
           className="relative group flex items-center justify-center w-14 h-14 rounded-full bg-primary text-white shadow-xl hover:bg-primary/90 transition-all duration-300 hover:scale-105 cursor-pointer border border-primary/20"

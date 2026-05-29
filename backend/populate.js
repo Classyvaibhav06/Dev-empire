@@ -1,6 +1,6 @@
 const { OpenAI } = require('openai');
 const fs = require('fs');
-require('dotenv').config();
+require('dotenv').config({ override: true });
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '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',

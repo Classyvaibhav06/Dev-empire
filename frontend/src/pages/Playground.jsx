@@ -203,12 +203,15 @@ export default function Playground() {
           userFn(customConsole);
           
           if (logs.length > 0) {
-            setOutput(logs.join('\\n'));
+            setOutput(logs.join('\n'));
           } else {
             setOutput('Code executed successfully (no console output).');
           }
         } catch (err) {
           setOutput(`Execution Error: ${err.message}`);
+          window.dispatchEvent(new CustomEvent('playgroundCodeError', {
+            detail: { errorMessage: err.message, code, language: 'javascript' }
+          }));
         }
         setIsRunning(false);
       }, 300);
@@ -231,13 +234,28 @@ export default function Playground() {
         
         if (data.compile && data.compile.code !== 0) {
           setOutput(`Compilation Error:\n${data.compile.output}`);
+          window.dispatchEvent(new CustomEvent('playgroundCodeError', {
+            detail: { errorMessage: data.compile.output, code, language }
+          }));
         } else if (data.run) {
           setOutput(data.run.output || 'Code executed successfully (no console output).');
+          if (data.run.stderr && data.run.stderr.trim() !== '') {
+            window.dispatchEvent(new CustomEvent('playgroundCodeError', {
+              detail: { errorMessage: data.run.stderr, code, language }
+            }));
+          }
         } else {
-          setOutput(`Execution Error: ${data.message || 'Unknown error'}`);
+          const errMsg = data.message || 'Unknown error';
+          setOutput(`Execution Error: ${errMsg}`);
+          window.dispatchEvent(new CustomEvent('playgroundCodeError', {
+            detail: { errorMessage: errMsg, code, language }
+          }));
         }
       } catch (err) {
         setOutput(`API Error: ${err.message}`);
+        window.dispatchEvent(new CustomEvent('playgroundCodeError', {
+          detail: { errorMessage: `API Error: ${err.message}`, code, language }
+        }));
       }
       setIsRunning(false);
     }
