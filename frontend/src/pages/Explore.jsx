@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Search, FileCode2, Globe, Clock, Copy, GitFork } from 'lucide-react';
+import { Heart, Search, FileCode2, Globe, Clock, Copy, GitFork, Terminal } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { API_BASE_URL } from '../config';
 

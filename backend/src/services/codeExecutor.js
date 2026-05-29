@@ -2,7 +2,6 @@ const { spawn } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
-const crypto = require('crypto');
 
 async function executeCodeLocally(language, code) {
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'dev-empire-'));
