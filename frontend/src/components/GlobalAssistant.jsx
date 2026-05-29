@@ -739,8 +739,8 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
               onClick={() => handleAiModeChange('fast')}
               type="button"
               className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-sm text-xs font-medium transition-all duration-200 cursor-pointer relative z-10 ${aiMode === 'fast'
-                  ? 'text-textMain shadow-sm'
-                  : 'text-textDim hover:text-textMain'
+                ? 'text-textMain shadow-sm'
+                : 'text-textDim hover:text-textMain'
                 }`}
             >
               <Zap className="w-3.5 h-3.5" /> Fast
@@ -749,8 +749,8 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
               onClick={() => handleAiModeChange('reasoning')}
               type="button"
               className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-sm text-xs font-medium transition-all duration-200 cursor-pointer relative z-10 ${aiMode === 'reasoning'
-                  ? 'text-textMain shadow-sm'
-                  : 'text-textDim hover:text-textMain'
+                ? 'text-textMain shadow-sm'
+                : 'text-textDim hover:text-textMain'
                 }`}
             >
               <BrainCircuit className="w-3.5 h-3.5" /> Reasoning
@@ -872,8 +872,8 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
 
                       <div
                         className={`max-w-[85%] relative group animate-slide-up ${msg.role === 'user'
-                            ? 'bg-primary text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm'
-                            : 'bg-surfaceLight border border-surfaceBorder text-textMain rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm'
+                          ? 'bg-primary text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm'
+                          : 'bg-surfaceLight border border-surfaceBorder text-textMain rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm'
                           }`}
                       >
                         {msg.role === 'assistant' && <ThinkingBlock reasoning={msg.reasoning} />}
@@ -1154,8 +1154,8 @@ function formatMessageContent(text) {
             const alertType = matchAlert ? matchAlert[1].toUpperCase() : 'NOTE';
             return (
               <div key={lineIndex} className={`p-4 my-3 rounded-xl border border-l-4 text-xs ${alertType === 'WARNING' || alertType === 'CAUTION'
-                  ? 'bg-danger/5 border-danger/20 border-l-danger text-danger'
-                  : 'bg-primary/5 border-primary/20 border-l-primary text-textMuted'
+                ? 'bg-danger/5 border-danger/20 border-l-danger text-danger'
+                : 'bg-primary/5 border-primary/20 border-l-primary text-textMuted'
                 }`}>
                 <span className="font-black block uppercase tracking-wider text-[9px] mb-1">{alertType}</span>
                 {renderInlineFormatting(lines.slice(lineIndex + 1).join('\n').split('\n')[0].replace(/^>\s*/, ''))}
