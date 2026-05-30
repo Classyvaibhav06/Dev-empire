@@ -1,0 +1,54 @@
+version: '3.9'
+
+services:
+
+  # ──────────────────────────────────────────────
+  # Backend — Node.js / Express API
+  # ──────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dev-empire-backend
+    restart: unless-stopped
+    environment:
+      # ⚠️  Copy these from backend/.env or use a real .env file via env_file
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 5000
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL}
+    ports:
+      - "5001:5000"   # Exposed on 5001 to prevent conflicts on port 5000; Nginx proxies to internal port 5000 anyway
+    networks:
+      - dev-empire-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ──────────────────────────────────────────────
+  # Frontend — Vite React + Nginx
+  # ──────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # At build time, tell Vite to talk to relative /api (Nginx will proxy it to backend)
+        VITE_API_BASE_URL: "/"
+    container_name: dev-empire-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"       # Main app accessible at http://localhost:8080 (changed from 80 to prevent conflicts with XAMPP)
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - dev-empire-network
+
+networks:
+  dev-empire-network:
+    driver: bridge

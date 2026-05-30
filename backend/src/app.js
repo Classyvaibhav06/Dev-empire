@@ -7,6 +7,9 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
+  'http://localhost',
+  'http://localhost:80',
+  'http://localhost:8080',
   'https://dev-empire.vercel.app',
   'https://dev-empire-9twz.vercel.app',
   ...(process.env.ALLOWED_ORIGINS || '')
@@ -29,6 +32,11 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// ── Health check for Docker/K8s ──
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Mount the aggregated router at /api prefix
 const apiRouter = require('./routes');

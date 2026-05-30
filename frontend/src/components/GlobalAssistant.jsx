@@ -30,7 +30,7 @@ export default function GlobalAssistant() {
 
   const [chatOpen, setChatOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'report'
-  const { token, updateUserStats } = useContext(AuthContext);
+  const { token, updateUserStats, setAuthModalOpen } = useContext(AuthContext);
   const [chatHistory, setChatHistory] = useState([]);
   // Chat session ID for persisting with the backend (null means no session yet)
   const [chatSessionId, setChatSessionId] = useState(null);
@@ -368,6 +368,10 @@ Guide the student step-by-step. Keep explanations clear, engaging, and context-a
 
   const handleSendChat = async (e, customMessage = null, isNewChat = false) => {
     if (e) e.preventDefault();
+    if (!token) {
+      setAuthModalOpen(true);
+      return;
+    }
     const userMsgText = customMessage || inputMessage;
     if (!userMsgText.trim() || isGenerating) return;
 
@@ -553,6 +557,10 @@ Can you help me understand what is wrong and how to fix it?`;
   };
 
   const handleGenerateReport = async () => {
+    if (!token) {
+      setAuthModalOpen(true);
+      return;
+    }
     if (isAnalyzing) return;
     setIsAnalyzing(true);
     setAiReport('');
