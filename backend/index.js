@@ -1,20 +1,25 @@
 const app = require('./src/app');
-const db = require('./src/config/db');
 require('dotenv').config({ override: true });
 
-const PORT = process.env.PORT || 5000;
+// Local development: start HTTP server normally
+// Vercel serverless: imports this module and uses `module.exports` as the handler
+if (require.main === module) {
+  const db = require('./src/config/db');
+  const PORT = process.env.PORT || 5000;
 
-// Initialize PostgreSQL Schema on Startup
-db.initDb()
-  .then(() => {
-    console.log('PostgreSQL database initialized successfully.');
-    
-    // Start HTTP Server
-    app.listen(PORT, () => {
-      console.log(`Server is running in production-grade architecture on port ${PORT}`);
+  db.initDb()
+    .then(() => {
+      console.log('PostgreSQL database initialized successfully.');
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    })
+    .catch(err => {
+      console.error('PostgreSQL database initialization failed:', err);
+      process.exit(1);
     });
-  })
-  .catch(err => {
-    console.error('PostgreSQL database initialization failed:', err);
-    process.exit(1);
-  });
+}
+
+// Vercel uses this export as the serverless function handler
+module.exports = app;
+

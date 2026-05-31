@@ -1,6 +1,20 @@
 const express = require('express');
 const cors = require('cors');
+const db = require('./config/db');
 require('dotenv').config({ override: true });
+
+// Lazy one-time DB init — runs on first request, shared across warm instances
+let dbInitPromise = null;
+function ensureDb() {
+  if (!dbInitPromise) {
+    dbInitPromise = db.initDb().catch(err => {
+      // Reset so next request retries
+      dbInitPromise = null;
+      throw err;
+    });
+  }
+  return dbInitPromise;
+}
 
 const app = express();
 
@@ -38,6 +52,17 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 app.use(express.json());
+
+// Ensure DB schema is ready before any route runs
+app.use(async (req, res, next) => {
+  try {
+    await ensureDb();
+    next();
+  } catch (err) {
+    console.error('DB init failed:', err.message);
+    res.status(503).json({ error: 'Database unavailable. Please try again.' });
+  }
+});
 
 // ── Health check for Docker/K8s ──
 app.get('/health', (req, res) => {
