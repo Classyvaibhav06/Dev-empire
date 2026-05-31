@@ -18,18 +18,23 @@ const allowedOrigins = [
     .filter(Boolean),
 ];
 
-app.use(cors({
+const corsOptions = {
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
       return;
     }
-
     callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+
+// Handle OPTIONS preflight explicitly so it never reaches other middleware
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 
