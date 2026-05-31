@@ -40,7 +40,7 @@ export default function GlobalAssistant() {
   const [showHistoryPrompt, setShowHistoryPrompt] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [aiMode, setAiMode] = useState(() => localStorage.getItem('mentor_ai_mode') || 'fast');
+  const [aiModel, setAiModel] = useState(() => localStorage.getItem('mentor_ai_model') || 'meta/llama-3.1-8b-instruct');
   const [visualMode, setVisualMode] = useState(() => localStorage.getItem('mentor_visual_mode') === 'true');
   const [showVisualPrompt, setShowVisualPrompt] = useState(() => !localStorage.getItem('mentor_visual_mode_seen'));
 
@@ -263,10 +263,7 @@ export default function GlobalAssistant() {
     }
   }, [chatHistory, isAtBottom]);
 
-  const handleAiModeChange = (mode) => {
-    setAiMode(mode);
-    localStorage.setItem('mentor_ai_mode', mode);
-  };
+
 
   const handleClearChat = () => {
     if (window.confirm('Are you sure you want to clear your current conversation?')) {
@@ -373,7 +370,7 @@ export default function GlobalAssistant() {
     const scoreProfile = `Student's Progress Profile:\n- Concepts Attempted: ${attemptedList.length} / 55\n- Correct Quiz Answers: ${correctCount} / ${attemptedList.length}`;
 
     const visualInstructions = visualMode
-      ? `\n\nIMPORTANT VISUAL MODE: The student has enabled Visual Diagram Mode. You MUST include clear, beautiful Mermaid.js diagrams to visually explain concepts wherever applicable. Use \`\`\`mermaid code blocks for flowcharts, sequence diagrams, class diagrams, ER diagrams, state diagrams, or mind maps as appropriate. Guidelines for diagrams:\n- Use \`graph TD\` or \`graph LR\` for flowcharts\n- Use \`sequenceDiagram\` for processes with multiple actors\n- Use \`classDiagram\` for OOP concepts\n- Use \`erDiagram\` for database schemas\n- Use \`stateDiagram-v2\` for state machines\n- Keep node labels short and clean (no special characters like parentheses in unquoted labels)\n- ALWAYS use valid Mermaid edge syntax. For directed edges with text, use \`-->|text|\` ONLY. DO NOT use invalid syntax like \`-->|text|>\`.\n- Always pair diagrams with concise textual explanations\n- In each explanation, provide step-by-step examples or iterations of what happens, clearly illustrating the process iteratively, just like Claude does. Break down the visual diagrams into iterative steps if the concept is complex.\n- Make diagrams comprehensive but readable`
+      ? `\n\nIMPORTANT VISUAL MODE: The student has enabled Visual Diagram Mode. You MUST include clear, beautiful Mermaid.js diagrams to visually explain concepts wherever applicable. Use \`\`\`mermaid code blocks for flowcharts, sequence diagrams, class diagrams, ER diagrams, state diagrams, or mind maps as appropriate. Guidelines for diagrams:\n- Use \`graph TD\` or \`graph LR\` for flowcharts\n- Use \`sequenceDiagram\` for processes with multiple actors\n- Use \`classDiagram\` for OOP concepts\n- Use \`erDiagram\` for database schemas\n- Use \`stateDiagram-v2\` for state machines\n- CRITICAL: ALWAYS wrap node labels in double quotes to prevent syntax errors. Example: Use \`A["My Label (with special chars)"]\` instead of \`A[My Label (with special chars)]\`.\n- ALWAYS use valid Mermaid edge syntax. For directed edges with text, use \`-->|text|\` ONLY. DO NOT use invalid syntax like \`-->|text|>\`.\n- Always pair diagrams with concise textual explanations\n- In each explanation, provide step-by-step examples or iterations of what happens, clearly illustrating the process iteratively, just like Claude does. Break down the visual diagrams into iterative steps if the concept is complex.\n- Make diagrams comprehensive but readable`
       : '';
 
     return `You are the Dev Empire AI Study Mentor, an expert programming assistant.
@@ -428,7 +425,8 @@ Guide the student step-by-step. Keep explanations clear, engaging, and context-a
         headers,
         body: JSON.stringify({
           messages: payloadMessages,
-          mode: aiMode
+          model: aiModel,
+          mode: aiModel.includes('8b') ? 'fast' : 'reasoning'
         })
       });
 
@@ -607,7 +605,8 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
             { role: 'system', content: 'You are the Dev Empire AI Study Auditor. Generate beautiful, professional markdown progress audits.' },
             { role: 'user', content: prompt }
           ],
-          mode: aiMode
+          model: aiModel,
+          mode: aiModel.includes('8b') ? 'fast' : 'reasoning'
         })
       });
 
@@ -781,34 +780,32 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
             </div>
           </div>
 
-          {/* Segmented Engine Toggle */}
-          <div className="flex p-1 bg-surfaceLight border border-surfaceBorder rounded-md relative">
-            <button
-              onClick={() => handleAiModeChange('fast')}
-              type="button"
-              className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-sm text-xs font-medium transition-all duration-200 cursor-pointer relative z-10 ${aiMode === 'fast'
-                ? 'text-textMain shadow-sm'
-                : 'text-textDim hover:text-textMain'
-                }`}
+          {/* Model Selector */}
+          <div className="flex bg-surfaceLight border border-surfaceBorder rounded-md relative overflow-hidden group shadow-sm w-full">
+            <select
+              value={aiModel}
+              onChange={(e) => {
+                setAiModel(e.target.value);
+                localStorage.setItem('mentor_ai_model', e.target.value);
+              }}
+              className="w-full bg-transparent text-[11px] font-bold text-textMain py-2 pl-3 pr-8 outline-none cursor-pointer appearance-none transition-colors group-hover:bg-surfaceHover/50"
             >
-              <Zap className="w-3.5 h-3.5" /> Fast
-            </button>
-            <button
-              onClick={() => handleAiModeChange('reasoning')}
-              type="button"
-              className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-sm text-xs font-medium transition-all duration-200 cursor-pointer relative z-10 ${aiMode === 'reasoning'
-                ? 'text-textMain shadow-sm'
-                : 'text-textDim hover:text-textMain'
-                }`}
-            >
-              <BrainCircuit className="w-3.5 h-3.5" /> Reasoning
-            </button>
-
-            {/* Sliding highlight pill */}
-            <div
-              className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-surface rounded-sm transition-transform duration-300 ease-out shadow-sm border border-surfaceBorder"
-              style={{ transform: aiMode === 'fast' ? 'translateX(0)' : 'translateX(100%)', left: '4px' }}
-            ></div>
+              <optgroup className="bg-surface text-textMain font-bold" label="Fast & General">
+                <option className="bg-surface text-textMain font-medium" value="meta/llama-3.1-8b-instruct">Llama 3.1 8B (Fast)</option>
+                <option className="bg-surface text-textMain font-medium" value="mistralai/mistral-nemo-12b-instruct">Mistral NeMo 12B (OSS)</option>
+              </optgroup>
+              <optgroup className="bg-surface text-textMain font-bold" label="Advanced Reasoning & Coding">
+                <option className="bg-surface text-textMain font-medium" value="meta/llama-3.3-70b-instruct">Llama 3.3 70B (Recommended)</option>
+                <option className="bg-surface text-textMain font-medium" value="mistralai/mistral-large-2407">Mistral Large 120B (OSS)</option>
+                <option className="bg-surface text-textMain font-medium" value="openai/gpt-oss-120b">GPT OSS 120B</option>
+                <option className="bg-surface text-textMain font-medium" value="qwen/qwen2.5-coder-32b-instruct">Qwen 2.5 Coder 32B</option>
+                <option className="bg-surface text-textMain font-medium" value="deepseek-ai/deepseek-r1">DeepSeek R1</option>
+                <option className="bg-surface text-textMain font-medium" value="nvidia/llama-3.1-nemotron-70b-instruct">Nemotron 70B</option>
+              </optgroup>
+            </select>
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-textDim group-hover:text-textMain transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
           </div>
         </div>
 

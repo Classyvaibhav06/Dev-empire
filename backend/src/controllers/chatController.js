@@ -80,7 +80,7 @@ const deleteSession = async (req, res) => {
 };
 
 const streamChat = async (req, res) => {
-  const { messages, mode } = req.body;
+  const { messages, mode, model } = req.body;
 
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'Invalid messages array' });
@@ -102,11 +102,13 @@ const streamChat = async (req, res) => {
     const isGroq = (openai.baseURL && openai.baseURL.includes('groq')) || 
                    (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.includes('groq'));
     
-    let modelName;
-    if (isGroq) {
-      modelName = useFast ? "llama-3.1-8b-instant" : "deepseek-r1-distill-llama-70b";
-    } else {
-      modelName = useFast ? "meta/llama-3.1-8b-instruct" : "deepseek-ai/deepseek-v4-flash";
+    let modelName = model;
+    if (!modelName) {
+      if (isGroq) {
+        modelName = useFast ? "llama-3.1-8b-instant" : "deepseek-r1-distill-llama-70b";
+      } else {
+        modelName = useFast ? "meta/llama-3.1-8b-instruct" : "meta/llama-3.3-70b-instruct";
+      }
     }
 
     const completionOptions = {

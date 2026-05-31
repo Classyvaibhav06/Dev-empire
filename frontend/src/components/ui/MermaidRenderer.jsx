@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import mermaid from 'mermaid';
-import { Maximize2, Download, AlertCircle, X, ZoomIn, ZoomOut, RefreshCw, Move } from 'lucide-react';
+import { Maximize2, Minimize2, Download, AlertCircle, X, ZoomIn, ZoomOut, RefreshCw, Move } from 'lucide-react';
 
 let mermaidInitialized = false;
 let uniqueIdCounter = 0;
@@ -178,6 +178,7 @@ function DiagramModal({ svgContent, onClose, onDownload }) {
   const [scale, setScale] = useState(1);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
 
   const handleWheel = (e) => {
@@ -205,11 +206,8 @@ function DiagramModal({ svgContent, onClose, onDownload }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm animate-fade-in p-4 md:p-8">
-      {/* 
-        Takes ~65% width and ~80% height on desktop 
-      */}
-      <div className="relative w-full md:w-[65vw] h-full md:h-[80vh] max-h-[900px] bg-surface border border-surfaceBorder rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+    <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm animate-fade-in ${isFullscreen ? 'p-0' : 'p-4 md:p-8'}`}>
+      <div className={`relative bg-surface border border-surfaceBorder flex flex-col overflow-hidden animate-scale-in transition-all duration-300 ${isFullscreen ? 'w-full h-full rounded-none' : 'w-full md:w-[65vw] h-full md:h-[80vh] max-h-[900px] rounded-2xl shadow-2xl'}`}>
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-surfaceBorder bg-surfaceLight z-10">
@@ -237,6 +235,9 @@ function DiagramModal({ svgContent, onClose, onDownload }) {
               </button>
             </div>
             
+            <button onClick={() => setIsFullscreen(!isFullscreen)} className="p-2.5 rounded-xl border border-surfaceBorder bg-background hover:bg-surfaceHover text-textMain transition-colors shadow-sm hidden sm:block cursor-pointer" title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
             <button onClick={onDownload} className="p-2.5 rounded-xl border border-surfaceBorder bg-background hover:bg-surfaceHover text-textMain transition-colors shadow-sm hidden sm:block cursor-pointer" title="Download SVG">
               <Download className="w-4 h-4" />
             </button>

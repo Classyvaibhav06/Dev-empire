@@ -34,9 +34,9 @@
   /* Light Theme (roadmap.sh inspired - crisp, clean, developer-focused) */
   --background: #ffffff;
   --surface: #ffffff;
-  --surface-hover: #f8f9fa;
-  --surface-light: #f8f9fa;
-  --surface-border: #e2e8f0;
+  --surface-hover: #f1f5f9;
+  --surface-light: #f8fafc;
+  --surface-border: #cbd5e1;
   --surface-border-hover: #94a3b8;
 
   --primary: #2563eb;
@@ -47,9 +47,9 @@
   --warning: #ea580c;
   --danger: #dc2626;
 
-  --text-main: #0f172a;
-  --text-muted: #475569;
-  --text-dim: #64748b;
+  --text-main: #020617;
+  --text-muted: #1e293b;
+  --text-dim: #334155;
 }
 
 .dark {
@@ -124,15 +124,18 @@ body::before {
   background-color: var(--color-surface);
   border: 1px solid var(--color-surfaceBorder);
   transition: all 0.2s ease-in-out;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
 }
 
 .card:hover {
   border-color: var(--color-surfaceBorderHover);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 .surface {
   background-color: var(--color-surface);
   border: 1px solid var(--color-surfaceBorder);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
 }
 
 .surface-light {
