@@ -375,6 +375,15 @@ export default function Challenges() {
     return () => { document.body.style.overflow = ''; };
   }, [selectedChallenge]);
 
+  // Sync current code to GlobalAssistant context
+  useEffect(() => {
+    const event = new CustomEvent('playgroundCodeUpdate', { detail: code });
+    window.dispatchEvent(event);
+    return () => {
+      window.dispatchEvent(new CustomEvent('playgroundCodeUpdate', { detail: null }));
+    };
+  }, [code]);
+
   useEffect(() => {
     const loadCompletedList = () => {
       const savedCompleted = localStorage.getItem('completed_challenges');
@@ -483,6 +492,9 @@ export default function Challenges() {
         if (data.compile && data.compile.code !== 0) {
            setOutputConsole(`Compilation Error:\n${data.compile.output}`);
            setTestResults('fail');
+           window.dispatchEvent(new CustomEvent('playgroundCodeError', {
+             detail: { errorMessage: data.compile.output, code, language: 'python' }
+           }));
         } else if (data.run) {
            setOutputConsole(data.run.output || 'No output.');
            if (data.run.output && !data.run.output.includes('✗') && data.run.output.includes('✓')) {
@@ -492,8 +504,12 @@ export default function Challenges() {
                setTestResults('fail');
            }
         } else {
-           setOutputConsole(data.error || 'Execution failed.');
+           const errMsg = data.error || 'Execution failed.';
+           setOutputConsole(errMsg);
            setTestResults('fail');
+           window.dispatchEvent(new CustomEvent('playgroundCodeError', {
+             detail: { errorMessage: errMsg, code, language: 'python' }
+           }));
         }
       } else {
         const res = await fetch(`${API_BASE_URL}/api/playground/execute`, {
@@ -505,16 +521,26 @@ export default function Challenges() {
         const data = await res.json();
         if (data.compile && data.compile.code !== 0) {
            setOutputConsole(`Compilation Error:\n${data.compile.output}`);
+           window.dispatchEvent(new CustomEvent('playgroundCodeError', {
+             detail: { errorMessage: data.compile.output, code, language }
+           }));
         } else if (data.run) {
            setOutputConsole(data.run.output || 'Code executed. Note: Automated testing is not available for C++/Java yet. Verify your output manually.');
         } else {
-           setOutputConsole(data.error || 'Execution failed.');
+           const errMsg = data.error || 'Execution failed.';
+           setOutputConsole(errMsg);
+           window.dispatchEvent(new CustomEvent('playgroundCodeError', {
+             detail: { errorMessage: errMsg, code, language }
+           }));
         }
         setTestResults(null);
       }
     } catch (err) {
       setOutputConsole(`Execution Error: ${err.message}`);
       setTestResults('fail');
+      window.dispatchEvent(new CustomEvent('playgroundCodeError', {
+        detail: { errorMessage: err.message, code, language }
+      }));
     }
   };
 

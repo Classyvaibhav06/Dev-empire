@@ -18,11 +18,14 @@ import {
   ArrowRight,
   TrendingUp,
   BrainCircuit,
-  Code2
+  Code2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Card, Badge } from './ui/Shared';
 import { getTopicById, getConceptDetail } from '../utils/topicContent';
 import { AuthContext } from '../context/AuthContext';
+import MermaidRenderer from './ui/MermaidRenderer';
 
 export default function GlobalAssistant() {
   const location = useLocation();
@@ -38,6 +41,8 @@ export default function GlobalAssistant() {
   const [inputMessage, setInputMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiMode, setAiMode] = useState(() => localStorage.getItem('mentor_ai_mode') || 'fast');
+  const [visualMode, setVisualMode] = useState(() => localStorage.getItem('mentor_visual_mode') === 'true');
+  const [showVisualPrompt, setShowVisualPrompt] = useState(() => !localStorage.getItem('mentor_visual_mode_seen'));
 
   // Report States
   const [scores, setScores] = useState({});
@@ -311,6 +316,13 @@ export default function GlobalAssistant() {
         `Help me find a bug in my code`,
         `Explain what my code does step-by-step`
       ];
+    } else if (path === '/challenges') {
+      return [
+        `How do I approach this challenge?`,
+        `Can you give me a hint without the answer?`,
+        `Explain the optimal time complexity for this.`,
+        `What are some edge cases I should consider?`
+      ];
     }
 
     // Default fallback
@@ -347,6 +359,11 @@ export default function GlobalAssistant() {
       if (playgroundContext) {
         contextMessage += `\n\n[PLAYGROUND CODE CONTEXT]\nHere is the exact code the user currently has written in their editor:\n\`\`\`javascript\n${playgroundContext}\n\`\`\`\nWhen answering, use this code context to provide highly specific debugging or suggestions.`;
       }
+    } else if (path === '/challenges') {
+      contextMessage = `The user is in the Coding Challenges section.`;
+      if (playgroundContext) {
+        contextMessage += `\n\n[CHALLENGE CODE CONTEXT]\nHere is the exact code the user currently has written to solve the challenge:\n\`\`\`javascript\n${playgroundContext}\n\`\`\`\nWhen answering, use this code context to provide highly specific debugging, hints, or suggestions without giving away the full solution immediately unless asked.`;
+      }
     } else {
       contextMessage = `The user is on the homepage or an unknown page of Dev Empire.`;
     }
@@ -354,6 +371,10 @@ export default function GlobalAssistant() {
     const attemptedList = Object.keys(scores);
     const correctCount = Object.values(scores).filter(s => s.score === 1).length;
     const scoreProfile = `Student's Progress Profile:\n- Concepts Attempted: ${attemptedList.length} / 55\n- Correct Quiz Answers: ${correctCount} / ${attemptedList.length}`;
+
+    const visualInstructions = visualMode
+      ? `\n\nIMPORTANT VISUAL MODE: The student has enabled Visual Diagram Mode. You MUST include clear, beautiful Mermaid.js diagrams to visually explain concepts wherever applicable. Use \`\`\`mermaid code blocks for flowcharts, sequence diagrams, class diagrams, ER diagrams, state diagrams, or mind maps as appropriate. Guidelines for diagrams:\n- Use \`graph TD\` or \`graph LR\` for flowcharts\n- Use \`sequenceDiagram\` for processes with multiple actors\n- Use \`classDiagram\` for OOP concepts\n- Use \`erDiagram\` for database schemas\n- Use \`stateDiagram-v2\` for state machines\n- Keep node labels short and clean (no special characters like parentheses in unquoted labels)\n- ALWAYS use valid Mermaid edge syntax. For directed edges with text, use \`-->|text|\` ONLY. DO NOT use invalid syntax like \`-->|text|>\`.\n- Always pair diagrams with concise textual explanations\n- In each explanation, provide step-by-step examples or iterations of what happens, clearly illustrating the process iteratively, just like Claude does. Break down the visual diagrams into iterative steps if the concept is complex.\n- Make diagrams comprehensive but readable`
+      : '';
 
     return `You are the Dev Empire AI Study Mentor, an expert programming assistant.
 Your goal is to help students master software engineering.
@@ -363,7 +384,7 @@ ${contextMessage}
 
 ${scoreProfile}
 
-Guide the student step-by-step. Keep explanations clear, engaging, and context-aware. Provide helpful code examples if requested. When displaying code, use markdown syntax highlighting. Respond using markdown formatting.`;
+Guide the student step-by-step. Keep explanations clear, engaging, and context-aware. Provide helpful code examples if requested. When displaying code, use markdown syntax highlighting. Respond using markdown formatting.${visualInstructions}`;
   };
 
   const handleSendChat = async (e, customMessage = null, isNewChat = false) => {
@@ -646,7 +667,7 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
   return (
     <>
       {/* ── FLOATING CHAT BUBBLE ── */}
-      <div className={`fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-40 transition-transform duration-500 ease-in-out drawer-shift-element ${chatOpen ? 'opacity-0 pointer-events-none' : ''}`}>
+      <div className={`fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-[150] transition-transform duration-500 ease-in-out drawer-shift-element ${chatOpen ? 'opacity-0 pointer-events-none' : ''}`}>
 
         {/* Error Help Notification Popup */}
         {showErrorHelp && errorDetails && (
@@ -694,13 +715,13 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
 
       {/* ── BACKDROP OVERLAY ── */}
       <div
-        className={`fixed inset-0 z-50 bg-background/70 backdrop-blur-md transition-all duration-500 ${chatOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-[190] bg-background/70 backdrop-blur-md transition-all duration-500 ${chatOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setChatOpen(false)}
       />
 
       {/* ── DRAWER CONTAINER ── */}
       <div
-        className={`fixed top-0 right-0 bottom-0 lg:top-4 lg:bottom-4 lg:right-4 z-[100] w-full max-w-lg bg-surface lg:rounded-2xl border-l lg:border border-surfaceBorder shadow-2xl flex flex-col transition-all duration-500 ease-out ${chatOpen ? 'translate-x-0 opacity-100' : 'translate-x-[120%] lg:translate-x-[150%] opacity-0'}`}
+        className={`fixed top-0 right-0 bottom-0 lg:top-4 lg:bottom-4 lg:right-4 z-[200] w-full bg-surface lg:rounded-2xl border-l lg:border border-surfaceBorder shadow-2xl flex flex-col transition-all duration-500 ease-out ${visualMode ? 'max-w-2xl' : 'max-w-lg'} ${chatOpen ? 'translate-x-0 opacity-100' : 'translate-x-[120%] lg:translate-x-[150%] opacity-0'}`}
       >
         {/* Header */}
         <div className="p-4 border-b border-surfaceBorder flex flex-col gap-4 bg-surface shrink-0 lg:rounded-t-2xl">
@@ -722,7 +743,26 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              {/* Visual Mode Toggle */}
+              <button
+                onClick={() => {
+                  const newVal = !visualMode;
+                  setVisualMode(newVal);
+                  localStorage.setItem('mentor_visual_mode', String(newVal));
+                  localStorage.setItem('mentor_visual_mode_seen', 'true');
+                  setShowVisualPrompt(false);
+                }}
+                title={visualMode ? 'Disable Visual Diagrams' : 'Enable Visual Diagrams'}
+                className={`h-9 px-2.5 inline-flex items-center justify-center gap-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer border ${
+                  visualMode
+                    ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20'
+                    : 'bg-transparent text-textDim border-transparent hover:bg-surfaceHover hover:text-textMain'
+                }`}
+              >
+                {visualMode ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{visualMode ? 'Visual' : 'Text'}</span>
+              </button>
               {chatHistory.length > 0 && (
                 <button
                   onClick={handleClearChat}
@@ -835,13 +875,62 @@ Analyze my strong areas, identify weak topics I struggled with, and draft a tail
                 </div>
               ) : chatHistory.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6 select-none animate-fade-in">
+                  {/* Visual Mode First-Time Prompt */}
+                  {showVisualPrompt && (
+                    <div className="w-full max-w-sm mb-6 animate-scale-in">
+                      <div className="bg-gradient-to-br from-primary/5 to-accent/5 border border-primary/20 rounded-2xl p-5 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+                        <div className="flex items-start gap-3 relative">
+                          <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0 shadow-inner">
+                            <Eye className="w-5 h-5" />
+                          </div>
+                          <div className="text-left flex-1">
+                            <h5 className="text-sm font-bold text-textMain mb-1">Enable Visual Diagrams?</h5>
+                            <p className="text-[11px] text-textMuted leading-relaxed mb-3">
+                              Get beautiful interactive flowcharts, architecture diagrams, and visual explanations with every answer.
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setVisualMode(true);
+                                  localStorage.setItem('mentor_visual_mode', 'true');
+                                  localStorage.setItem('mentor_visual_mode_seen', 'true');
+                                  setShowVisualPrompt(false);
+                                }}
+                                className="px-3.5 py-1.5 bg-primary text-white text-[11px] font-semibold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer shadow-sm"
+                              >
+                                Yes, enable visuals
+                              </button>
+                              <button
+                                onClick={() => {
+                                  localStorage.setItem('mentor_visual_mode_seen', 'true');
+                                  setShowVisualPrompt(false);
+                                }}
+                                className="px-3.5 py-1.5 bg-transparent text-textDim text-[11px] font-medium rounded-lg hover:bg-surfaceLight transition-colors cursor-pointer border border-surfaceBorder"
+                              >
+                                No, text only
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="w-12 h-12 rounded-full bg-surfaceLight border border-surfaceBorder flex items-center justify-center text-primary mb-4 shadow-sm">
                     <Sparkles className="w-6 h-6" />
                   </div>
                   <h4 className="font-semibold text-lg mb-2 text-textMain tracking-tight">Mentor Ready</h4>
-                  <p className="text-sm text-textMuted max-w-sm leading-relaxed mb-6">
+                  <p className="text-sm text-textMuted max-w-sm leading-relaxed mb-1">
                     Ask me to explain concepts, review code, or generate practice exercises. I see what you're working on!
                   </p>
+                  {visualMode && (
+                    <p className="text-[11px] text-primary font-semibold mb-4 flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5" />
+                      Visual diagrams enabled — answers will include interactive flowcharts
+                    </p>
+                  )}
+                  {!visualMode && <div className="mb-6" />}
                   <div className="w-full max-w-md grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
                     {getSuggestedQuestions().map((q, idx) => (
                       <button
@@ -1105,6 +1194,11 @@ function formatMessageContent(text) {
       const match = part.match(/```(\w*)\n([\s\S]*?)```/);
       const language = match ? match[1] : '';
       const code = match ? match[2] : part.slice(3, -3);
+
+      // ✨ Mermaid diagram rendering
+      if (language === 'mermaid') {
+        return <MermaidRenderer key={partIndex} chartCode={code} />;
+      }
 
       return (
         <pre key={partIndex} className="bg-background border border-surfaceBorder rounded-xl p-4 font-mono text-xs my-3 overflow-x-auto text-accent animate-scale-in max-w-full">

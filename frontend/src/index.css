@@ -233,3 +233,23 @@ body.drawer-open .drawer-shift-element {
   }
 }
 
+/* ══════════════════════════════════════
+   MERMAID DIAGRAM STYLES
+   ══════════════════════════════════════ */
+
+.mermaid-diagram-wrapper {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mermaid-svg-container {
+  min-height: 80px;
+  transition: all 0.3s ease-out;
+}
+
+.mermaid-svg-container svg {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+
