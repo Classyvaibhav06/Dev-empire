@@ -48,8 +48,8 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Handle OPTIONS preflight explicitly so it never reaches other middleware
-app.options('*', cors(corsOptions));
+// Handle OPTIONS preflight explicitly — use regex, Express 5 dropped bare '*' wildcard
+app.options(/(.*)/, cors(corsOptions));
 
 app.use(express.json());
 
