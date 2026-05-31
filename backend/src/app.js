@@ -12,6 +12,7 @@ const allowedOrigins = [
   'http://localhost:8080',
   'https://dev-empire.vercel.app',
   'https://dev-empire-9twz.vercel.app',
+  'https://devemire.vaibhav-ghoshi.in',
   ...(process.env.ALLOWED_ORIGINS || '')
     .split(',')
     .map(origin => origin.trim())
