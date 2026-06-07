@@ -1,89 +1,99 @@
-const { spawn } = require('child_process');
-const fs = require('fs').promises;
-const path = require('path');
-const os = require('os');
+const https = require('https');
 
-async function executeCodeLocally(language, code) {
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'dev-empire-'));
-  let filename = '';
-  let command = '';
-  let args = [];
-
-  switch (language) {
-    case 'javascript':
-      filename = 'main.js';
-      command = 'node';
-      args = [filename];
-      break;
-    case 'python':
-      filename = 'main.py';
-      command = 'python';
-      args = [filename];
-      break;
-    case 'cpp':
-      filename = 'main.cpp';
-      command = 'g++';
-      args = [filename, '-o', 'main.exe'];
-      break;
-    case 'java':
-      filename = 'Main.java';
-      command = 'javac';
-      args = [filename];
-      break;
-    default:
-      throw new Error(`Unsupported language: ${language}`);
-  }
-
-  const filepath = path.join(tmpDir, filename);
-  await fs.writeFile(filepath, code);
-
-  const runCommand = (cmd, cmdArgs) => {
-    return new Promise((resolve) => {
-      const proc = spawn(cmd, cmdArgs, { 
-        cwd: tmpDir, 
-        timeout: 5000,
-        env: { ...process.env, PYTHONIOENCODING: 'utf8' }
-      });
-      let output = '';
-      
-      proc.stdout.on('data', (data) => output += data.toString());
-      proc.stderr.on('data', (data) => output += data.toString());
-      
-      proc.on('close', (code) => {
-        resolve({ output, code });
-      });
-      proc.on('error', (err) => {
-        resolve({ output: err.message + '\n' + output, code: 1 });
+function requestData(url, options, postData) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(url, options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          if (res.statusCode >= 400) {
+            reject(new Error(`HTTP Error ${res.statusCode}: ${data}`));
+            return;
+          }
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(new Error(`Parse error: ${e.message}`));
+        }
       });
     });
+    req.on('error', reject);
+    if (postData) req.write(postData);
+    req.end();
+  });
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function executeCodeLocally(language, code) {
+  // Use Paiza.io API - Completely free, no API keys or credit cards required!
+  const languageMap = {
+    javascript: 'javascript',
+    python: 'python3',
+    cpp: 'cpp',
+    java: 'java'
   };
 
-  try {
-    let result;
-    if (language === 'cpp') {
-      const compileResult = await runCommand(command, args);
-      if (compileResult.code !== 0) {
-        return { run: { output: compileResult.output, code: compileResult.code } };
-      }
-      result = await runCommand(path.join(tmpDir, 'main.exe'), []);
-    } else if (language === 'java') {
-      const compileResult = await runCommand(command, args);
-      if (compileResult.code !== 0) {
-        return { run: { output: compileResult.output, code: compileResult.code } };
-      }
-      result = await runCommand('java', ['Main']);
-    } else {
-      result = await runCommand(command, args);
-    }
-    return { run: result };
-  } finally {
-    // Clean up
-    try {
-      await fs.rm(tmpDir, { recursive: true, force: true });
-    } catch (e) {
-      console.error('Failed to cleanup tmp dir', e);
-    }
+  const paizaLang = languageMap[language];
+  if (!paizaLang) {
+    throw new Error(`Unsupported language: ${language}`);
   }
+
+  const postData = JSON.stringify({
+    source_code: code,
+    language: paizaLang,
+    api_key: "guest"
+  });
+
+  // Step 1: Create Runner
+  const createData = await requestData('https://api.paiza.io/runners/create', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(postData)
+    }
+  }, postData);
+
+  if (!createData.id) {
+    throw new Error("Failed to create execution runner on Paiza.io");
+  }
+
+  // Step 2: Poll for completion
+  let attempts = 0;
+  while (attempts < 15) {
+    await delay(1000); // Wait 1 second before polling
+    const details = await requestData(`https://api.paiza.io/runners/get_details?id=${createData.id}&api_key=guest`, { method: 'GET' });
+    
+    if (details.status === 'completed') {
+      // Compilation Errors
+      let compileError;
+      if (details.build_result === 'failure' || details.build_result === 'error') {
+        compileError = { output: details.build_stderr || details.build_stdout || 'Compilation failed', code: 1 };
+      }
+
+      // Execution Errors
+      let runErrorStr = details.stderr || '';
+      if (details.result !== 'success' && !runErrorStr) {
+        runErrorStr = `Execution finished with status: ${details.result}`;
+      }
+
+      return {
+        compile: compileError,
+        run: compileError ? undefined : { 
+          output: details.stdout || '', 
+          stderr: runErrorStr, 
+          code: details.result === 'success' ? 0 : 1 
+        },
+        message: details.result !== 'success' ? `Execution status: ${details.result}` : undefined
+      };
+    }
+    
+    attempts++;
+  }
+
+  throw new Error("Execution timed out after 15 seconds.");
 }
 
 module.exports = { executeCodeLocally };

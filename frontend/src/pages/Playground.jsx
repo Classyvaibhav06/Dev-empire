@@ -245,7 +245,7 @@ export default function Playground() {
             }));
           }
         } else {
-          const errMsg = data.message || 'Unknown error';
+          const errMsg = data.message || data.error || 'Unknown error';
           setOutput(`Execution Error: ${errMsg}`);
           window.dispatchEvent(new CustomEvent('playgroundCodeError', {
             detail: { errorMessage: errMsg, code, language }
